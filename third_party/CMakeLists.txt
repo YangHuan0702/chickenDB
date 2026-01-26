@@ -1,0 +1,6 @@
+add_subdirectory(googletest)
+add_subdirectory(libpg_query)
+add_subdirectory(sql-parser)
+add_subdirectory(jsoncpp)
+add_subdirectory(glog)
+message(STATUS "duckdb_pg_query: ${duckdb_pg_query}")
