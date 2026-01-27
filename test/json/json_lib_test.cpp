@@ -3,7 +3,7 @@
 //
 #include "gtest/gtest.h"
 #include "json/json.h"
-
+#include "glog/logging.h"
 
 TEST(JSONCPP,testStringJSON) {
 

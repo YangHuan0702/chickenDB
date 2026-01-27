@@ -8,7 +8,7 @@
 #include "parser/parser.hpp"
 #include "pg_functions.hpp"
 
-namespace haloTP {
+namespace chickenDB {
 
 
 
