@@ -48,7 +48,7 @@ namespace chickenDB {
                 break;
             }
             default: {
-                throw std::runtime_error("Join type  " +std::to_string(root->jointype)+ "  not supported yet...\n", );
+                throw std::runtime_error("Join type  " +std::to_string(root->jointype)+ "  not supported yet...\n");
             }
         }
 
@@ -78,8 +78,7 @@ namespace chickenDB {
                 }
             }
             result->condition = std::move(join_condition);
-            return std::move(result);
         }
-
+        return std::move(result);
     }
 }

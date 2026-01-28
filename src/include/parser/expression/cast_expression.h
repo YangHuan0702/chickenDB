@@ -5,6 +5,7 @@
 #include "common/types/types.h"
 #include "parser/parsed_expression.h"
 
+
 namespace chickenDB {
     class CastExpression : public ParsedExpression {
     public:
@@ -15,7 +16,7 @@ namespace chickenDB {
 
         std::string ToString() const override;
 
-        bool Equals(const BaseExpression *other) const override;
+        bool Equals(ColumnRefExpression *other) const override;
 
         std::unique_ptr<ParsedExpression> Copy() const override;
     };

@@ -24,12 +24,8 @@ namespace chickenDB {
         return val.str_value;
     }
 
-    bool ContentExpression::Equals(const BaseExpression *other_) const {
-        if (!BaseExpression::Equals(other_)) {
-            return false;
-        }
-        auto other = (ContentExpression *)other_;
-        return val == other->val;
+    bool ContentExpression::Equals(ColumnRefExpression *other_) const {
+        return false;
     }
 
 

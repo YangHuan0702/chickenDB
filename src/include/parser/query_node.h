@@ -24,8 +24,8 @@ namespace chickenDB {
 
     class QueryNode {
     public:
-        QueryNode(QueryNodeType type): type_(type) {}
-        virtual ~QueryNode() {}
+        explicit QueryNode(QueryNodeType type): type_(type) {}
+        virtual ~QueryNode() = default;
 
         QueryNodeType type_;
 

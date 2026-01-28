@@ -9,6 +9,7 @@ namespace chickenDB {
     class ParsedExpression : public BaseExpression {
     public:
         explicit ParsedExpression(ExpressionType type,ExpressionClass expression_class) : BaseExpression(type, expression_class) {}
+        ~ParsedExpression() override = default;
 
         bool IsAggregate() const override;
         bool IsScalar() const override;

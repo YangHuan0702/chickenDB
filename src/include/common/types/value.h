@@ -61,7 +61,7 @@ namespace chickenDB {
         static Value SMALLINT(int16_t value);
 
         // 从指定的值创建一个 integer 类型的 Value。
-        static uint16_t INTEGER(int32_t value);
+        static Value INTEGER(int32_t value);
 
         // 从指定的值创建一个 bigint 类型的 Value。
         static Value BIGINT(int64_t value);

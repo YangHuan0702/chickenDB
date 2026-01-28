@@ -19,10 +19,7 @@ namespace chickenDB {
         return left->ToString() + " " + ExpressionTypeToOperator(type) + " " + right->ToString();
     }
 
-    bool ConjunctionExpression::Equals(const BaseExpression *other_) const {
-        if (!BaseExpression::Equals(other_)) {
-            return false;
-        }
+    bool ConjunctionExpression::Equals(ColumnRefExpression *other_) const {
         auto other = (ConjunctionExpression *)other_;
         if (left->Equals(other->left.get()) && right->Equals(other->right.get())) {
             return true;

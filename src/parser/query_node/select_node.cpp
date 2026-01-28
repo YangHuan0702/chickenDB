@@ -10,14 +10,9 @@ namespace chickenDB {
     }
 
     bool SelectNode::Equals(const QueryNode *other) const {
-        if (!QueryNode::Equals(other)) {
+        if (this != other) {
             return false;
         }
-
-        if (this == other) {
-            return true;
-        }
-
         return true;
     }
 

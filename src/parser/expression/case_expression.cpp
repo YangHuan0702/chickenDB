@@ -22,10 +22,7 @@ std::string CaseExpression::ToString() const {
            result_if_false->ToString() + ")";
 }
 
-bool CaseExpression::Equals(const BaseExpression *other_) const {
-    if (!BaseExpression::Equals(other_)) {
-        return false;
-    }
+bool CaseExpression::Equals(ColumnRefExpression *other_) const {
     auto other = (CaseExpression *)other_;
     if (!check->Equals(other->check.get())) {
         return false;

@@ -5,15 +5,15 @@
 #pragma once
 #include <memory>
 
-#include "parsed_expression.h"
 #include "common/enum/expression_type.h"
+#include "expression/column_expression.h"
 
 namespace chickenDB {
 
     class BaseExpression {
     public:
         explicit BaseExpression(ExpressionType type, ExpressionClass expressionClass) : type(type), expressionClass(expressionClass) {}
-        virtual ~BaseExpression() {}
+        virtual ~BaseExpression() = default;
 
         ExpressionType getType() const { return type;}
         ExpressionClass getExpressionClass() const { return expressionClass;}
@@ -22,8 +22,6 @@ namespace chickenDB {
         ExpressionType type;
         ExpressionClass expressionClass;
 
-
-    public:
         virtual bool IsAggregate() const = 0;
         virtual bool IsWindow() const = 0;
         virtual bool HasSubQuery() const = 0;
@@ -36,8 +34,6 @@ namespace chickenDB {
 
 
         virtual std::string ToString() const = 0;
-        void Print();
-
 
         virtual uint64_t Hash() const = 0;
 

@@ -14,6 +14,7 @@ namespace chickenDB {
     class SelectNode : public QueryNode {
     public:
         SelectNode() : QueryNode(SELECT_NODE) {}
+        ~SelectNode() override = default;
 
         std::vector<std::unique_ptr<ParsedExpression>> select_list;
 

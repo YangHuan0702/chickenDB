@@ -96,7 +96,7 @@ Value Value::SMALLINT(int16_t value) {
 	return result;
 }
 
-uint16_t Value::INTEGER(int32_t value) {
+Value Value::INTEGER(int32_t value) {
 	Value result(TypeId::INTEGER);
 	result.value_.integer = value;
 	result.is_null = false;

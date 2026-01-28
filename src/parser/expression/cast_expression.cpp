@@ -19,7 +19,7 @@ std::string CastExpression::ToString() const {
     return "CAST[" + std::to_string(cast_type.scale) + "](" + child->ToString() + ")";
 }
 
-bool CastExpression::Equals(const BaseExpression *other_) const {
+bool CastExpression::Equals(ColumnRefExpression *other_) const {
     if (!BaseExpression::Equals(other_)) {
         return false;
     }

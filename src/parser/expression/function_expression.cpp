@@ -2,8 +2,8 @@
 // Created by huan.yang on 2026-01-28.
 //
 #include "parser/expression/function_expression.h"
-
 #include "common/constants.h"
+#include "parser/expression/column_expression.h"
 
 using namespace chickenDB;
 
@@ -30,10 +30,7 @@ std::unique_ptr<ParsedExpression> FunctionExpression::Copy() const {
     return std::move(copy);
 }
 
-bool FunctionExpression::Equals(const BaseExpression *other_) const {
-    if (!BaseExpression::Equals(other_)) {
-        return false;
-    }
+bool FunctionExpression::Equals(ColumnRefExpression *other_) const {
     auto other = (FunctionExpression *)other_;
     if (schema != other->schema && function_name != other->function_name) {
         return false;

@@ -20,10 +20,7 @@ namespace chickenDB {
     }
 
 
-    bool ComparisonExpression::Equals(const BaseExpression *other_) const {
-        if (!BaseExpression::Equals(other_)) {
-            return false;
-        }
+    bool ComparisonExpression::Equals(ColumnRefExpression *other_) const {
         auto other = (ComparisonExpression *)other_;
         if (!left->Equals(other->left.get())) {
             return false;

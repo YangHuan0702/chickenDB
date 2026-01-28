@@ -36,10 +36,7 @@ namespace chickenDB {
         }
     }
 
-    bool ColumnRefExpression::Equals(const BaseExpression *other_) const {
-        if (!BaseExpression::Equals(other_)) {
-            return false;
-        }
+    bool ColumnRefExpression::Equals(ColumnRefExpression *other_) const {
         auto other = (ColumnRefExpression *)other_;
         return column_name == other->column_name && table_name == other->table_name;
     }

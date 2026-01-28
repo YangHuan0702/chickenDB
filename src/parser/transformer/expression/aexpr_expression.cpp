@@ -148,14 +148,14 @@ std::unique_ptr<ParsedExpression> Transformer::TransformAExpr(duckdb_libpgquery:
 			invert_similar = true;
 		}
 		const auto schema = DEFAULT_SCHEMA;
-		const auto regex_function = RegexpMatchesFunction::GetName();
+		const auto regex_function = "regexp_matches";
 		const auto lowercase_name = regex_function;
-		auto result = make_unique<FunctionExpression>(schema, lowercase_name.c_str(), children);
+		auto result = make_unique<FunctionExpression>(schema, lowercase_name, children);
 
 		if (invert_similar) {
-			return make_unique<OperatorExpression>(ExpressionType::OPERATOR_NOT, move(result));
+			return std::make_unique<OperatorExpression>(ExpressionType::OPERATOR_NOT, std::move(result));
 		} else {
-			return move(result);
+			return std::move(result);
 		}
 	} break;
 	default: {
@@ -200,14 +200,14 @@ std::unique_ptr<ParsedExpression> Transformer::TransformAExpr(duckdb_libpgquery:
 		children.push_back(std::move(right_expr));
 
 		const auto schema = DEFAULT_SCHEMA;
-		const auto regex_function = RegexpMatchesFunction::GetName();
+		const auto regex_function = "regexp_matches";
 		const auto lowercase_name = regex_function;
-		auto result = make_unique<FunctionExpression>(schema, lowercase_name.c_str(), children);
+		auto result = make_unique<FunctionExpression>(schema, lowercase_name, children);
 
 		if (invert_similar) {
-			return make_unique<OperatorExpression>(ExpressionType::OPERATOR_NOT, move(result));
+			return std::make_unique<OperatorExpression>(ExpressionType::OPERATOR_NOT, std::move(result));
 		} else {
-			return move(result);
+			return std::move(result);
 		}
 	}
 
