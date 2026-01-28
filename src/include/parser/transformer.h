@@ -22,10 +22,24 @@ namespace chickenDB {
         std::unique_ptr<SQLStatement> TransformerStatement(duckdb_libpgquery::PGNode *node);
 
     private:
+        std::unique_ptr<ParsedExpression> TransformValue(duckdb_libpgquery::PGValue value);
+        std::unique_ptr<ParsedExpression> TransformColumnRef(duckdb_libpgquery::PGColumnRef *root);
+        std::unique_ptr<ParsedExpression> TransformConstant(duckdb_libpgquery::PGAConst *c);
+        std::unique_ptr<ParsedExpression> TransformAExpr(duckdb_libpgquery::PGAExpr *root);
+        std::unique_ptr<ParsedExpression> TransformBoolExpr(duckdb_libpgquery::PGBoolExpr *root);
+        // std::unique_ptr<ParsedExpression> TransformTypeCast(duckdb_libpgquery::PGTypeCast *root);
+        // std::unique_ptr<ParsedExpression> TransformCase(duckdb_libpgquery::PGCaseExpr *root);
+        // std::unique_ptr<ParsedExpression> TransformSubquery(duckdb_libpgquery::PGSubLink *root);
+        // std::unique_ptr<ParsedExpression> TransformCoalesce(duckdb_libpgquery::PGAExpr *root);
+        // std::unique_ptr<ParsedExpression> TransformNullTest(duckdb_libpgquery::PGNullTest *root);
+        // std::unique_ptr<ParsedExpression> TransformResTarget(duckdb_libpgquery::PGResTarget *root);
+        // std::unique_ptr<ParsedExpression> TransformParamRef(duckdb_libpgquery::PGParamRef *node);
+
+        ExpressionType OperatorToExpressionType(std::string &op);
+        std::unique_ptr<ParsedExpression> TransformExpression(duckdb_libpgquery::PGNode *node);
         std::string TransformAlias(duckdb_libpgquery::PGAlias *root);
         bool TransformerOrderBy(duckdb_libpgquery::PGList *order,std::vector<OrderByNode> &result);
         bool TransformerExpressionList(duckdb_libpgquery::PGList *list,std::vector<std::unique_ptr<ParsedExpression>> &result);
-        std::unique_ptr<ParsedExpression> TransformExpression(duckdb_libpgquery::PGNode *node);
         std::unique_ptr<TableRef> TransformerTableRefNode(duckdb_libpgquery::PGNode *n);
         std::unique_ptr<TableRef> TransformJoin(duckdb_libpgquery::PGJoinExpr* expr);
         std::unique_ptr<TableRef> TransformRangeSubselect(duckdb_libpgquery::PGRangeSubselect* subselect);
@@ -33,7 +47,7 @@ namespace chickenDB {
         bool TransformGroupBy(duckdb_libpgquery::PGList *group, std::vector<std::unique_ptr<ParsedExpression>> &result);
         std::unique_ptr<TableRef> TransformerFrom(duckdb_libpgquery::PGList *root);
         void TransformValuesList(duckdb_libpgquery::PGList *list,std::vector<std::vector<std::unique_ptr<ParsedExpression>>> &values);
-
+        std::unique_ptr<ParsedExpression> TransformFuncCall(duckdb_libpgquery::PGFuncCall *root);
         std::unique_ptr<TableRef> TransformRangeVar(duckdb_libpgquery::PGRangeVar *node);
 
         // ==================== row ==================

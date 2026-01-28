@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "select_statement.h"
-#include "../../common/constants/constants.h"
+#include "../../common/constants.h"
 #include "parser/parsed_expression.h"
 #include "parser/sql_statement.h"
 

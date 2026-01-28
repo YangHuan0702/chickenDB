@@ -2,7 +2,7 @@
 // Created by huan.yang on 2026-01-27.
 //
 #pragma once
-#include "../../common/constants/constants.h"
+#include "../../common/constants.h"
 #include "parser/table_ref.h"
 #include <string>
 

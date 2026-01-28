@@ -1,0 +1,5 @@
+add_library(chickenDB_parser_transformer_expression OBJECT function_transform.cpp expression_transform.cpp column_ref_expression.cpp
+constant_expression.cpp aexpr_expression.cpp bool_expr_expression.cpp type_cast_expression.cpp case_expression.cpp subquery_expression.cpp
+coalesce_expression.cpp null_test_expression.cpp res_target_expression.cpp param_ref_expression.cpp)
+
+set(ALL_OBJECT_FILES ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:chickenDB_parser_transformer_expression> PARENT_SCOPE)
