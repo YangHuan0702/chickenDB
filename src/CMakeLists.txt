@@ -1,4 +1,5 @@
 add_subdirectory(parser)
+add_subdirectory(common)
 
 add_library(chickenDB STATIC ${ALL_OBJECT_FILES})
 
