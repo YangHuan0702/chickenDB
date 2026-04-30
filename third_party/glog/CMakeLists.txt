@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.22)
+cmake_minimum_required (VERSION 3.16.3)
 project (glog
   VERSION 0.8.0
   DESCRIPTION "C++ implementation of the Google logging module"

@@ -4,28 +4,25 @@
 #include "parser/parser.h"
 
 #include "glog/logging.h"
-#include "postgres_parser.hpp"
+#include "SQLParser.h"
+#include "SQLParserResult.h"
 
 #include "parser/transformer.h"
 
 namespace chickenDB {
 
-    Parser::Parser() {
-    }
-
-
     void Parser::ParserQuery(const std::string& querySQL) {
         LOG(INFO) << "Parsing to SQL : "<< querySQL;
-        duckdb::PostgresParser parser;
-        parser.Parse(querySQL);
+        hsql::SQLParserResult result;
+        hsql::SQLParser::parse(querySQL, &result);
 
-        if (!parser.success) {
-            LOG(ERROR) << "Parsing SQL : "<< querySQL << " error." << parser.error_message << " position:" << parser.error_location;
+        if (!result.isValid()) {
+            LOG(ERROR) << "Parsing SQL : "<< querySQL << " error." << result.errorMsg() << " position:" << result.errorLine();
             throw std::runtime_error("Parsing failed");
         }
 
         Transformer transformer;
-        transformer.TransformerPostgresTree(parser.parse_tree,statements_);
+        transformer.TransformerAST(result,statements_);
     }
 
 
