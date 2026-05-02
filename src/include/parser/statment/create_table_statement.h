@@ -9,13 +9,26 @@
 #include "sql_statement.h"
 
 namespace chickenDB {
+
+    struct ColumnDefine {
+        std::string name_;
+        ColumnType type_;
+        size_t size_;
+    };
+
+
     class CreateTableStatement : public SQLStatement {
     public:
         explicit CreateTableStatement(const std::string &table_name) : SQLStatement(StatementType::CREATE),
                                                                        table_name_(table_name) {
         }
-
         ~CreateTableStatement() override = default;
+
+        auto AddColumn(ColumnDefine column) -> void {
+            this->columns_.push_back(std::move(column));
+        }
+
+        std::vector<ColumnDefine> columns_;
 
         std::string table_name_;
     };

@@ -3,13 +3,14 @@
 //
 
 #include <gtest/gtest.h>
-#include <parser/postgres_parser.h>
 
 #include "parser/parser.h"
 
+using namespace chickenDB;
+
 TEST(ParserSQLTest,printParseredSQL) {
-    haloTP::PostgresParser parser;
+    Parser parser;
     std::string sql = "select * from user";
-    parser.Parser(sql);
+    parser.ParserQuery(sql);
 
 }

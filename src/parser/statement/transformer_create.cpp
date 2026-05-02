@@ -7,5 +7,5 @@ using namespace chickenDB;
 
 
 auto Transformer::TransformerCreateTable(const hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement> {
-
+    return nullptr;
 }

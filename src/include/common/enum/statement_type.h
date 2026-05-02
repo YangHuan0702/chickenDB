@@ -17,4 +17,11 @@ namespace chickenDB {
     };
 
 
+    enum class ColumnType : uint8_t {
+        NUMBER,
+        VARCHAR,
+        VARCHAR2,
+    };
+
+
 }
