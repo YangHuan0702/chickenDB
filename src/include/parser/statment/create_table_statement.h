@@ -4,6 +4,7 @@
 
 #pragma once
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "sql_statement.h"
@@ -19,8 +20,8 @@ namespace chickenDB {
 
     class CreateTableStatement : public SQLStatement {
     public:
-        explicit CreateTableStatement(const std::string &table_name) : SQLStatement(StatementType::CREATE),
-                                                                       table_name_(table_name) {
+        explicit CreateTableStatement(std::string table_name) : SQLStatement(StatementType::CREATE),
+                                                                       table_name_(std::move(table_name)) {
         }
         ~CreateTableStatement() override = default;
 

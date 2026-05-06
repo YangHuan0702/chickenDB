@@ -4,6 +4,7 @@
 
 #pragma once
 #include "SQLParserResult.h"
+#include "sql/CreateStatement.h"
 #include "statment/sql_statement.h"
 
 
@@ -15,11 +16,15 @@ namespace chickenDB {
 
         auto TransformerStatement(const hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
 
-        auto TransformerSelectStatement(const hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
-        auto TransformerInsertStatement(const hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
-        auto TransformerUpdateStatement(const hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
-        auto TransformerDeleteStatement(const hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
-        auto TransformerCreateTable(const hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
+        auto TransformerSelectStatement(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
+        auto TransformerInsertStatement( hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
+        auto TransformerUpdateStatement( hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
+        auto TransformerDeleteStatement( hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
+        auto TransformerCreateTable(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
+
+
+        auto TransformerExpression(hsql::Expr *) -> std::unique_ptr<ParserExpression>;
+
 
     };
 }

@@ -3,10 +3,18 @@
 //
 
 #include "parser/transformer.h"
+#include "parser/statment/delete_sql_statement.h"
+#include "sql/DeleteStatement.h"
 
 using namespace chickenDB;
 
 
-auto Transformer::TransformerDeleteStatement(const hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement> {
-    return nullptr;
+auto Transformer::TransformerDeleteStatement(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement> {
+    auto delete_statement = dynamic_cast<hsql::DeleteStatement*>(statement);
+
+    auto res = std::make_unique<DeleteStatement>(delete_statement->tableName);
+
+    auto expr = TransformerExpression(delete_statement->expr);
+    res->where_ = std::move(expr);
+    return res;
 }

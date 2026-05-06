@@ -8,10 +8,10 @@
 namespace chickenDB {
     class ChickenException : public std::runtime_error {
     public:
-        ChickenException(const std::string &message) : std::runtime_error(message) {
+        explicit ChickenException(const std::string &message) : std::runtime_error(message) {
         }
 
-        static auto AssertCondition(bool result, const std::string message) -> void {
+        static auto AssertCondition(bool result, const std::string &message) -> void {
             if (!result) {
                 throw ChickenException(message);
             }

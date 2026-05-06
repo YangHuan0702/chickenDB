@@ -4,6 +4,8 @@
 #pragma once
 #include <cstdint>
 
+#include "sql/ColumnType.h"
+
 namespace chickenDB {
 
     enum class StatementType : uint8_t {
@@ -21,7 +23,11 @@ namespace chickenDB {
         NUMBER,
         VARCHAR,
         VARCHAR2,
+        DOUBLE,
     };
+
+
+    static auto ConversionChickenDBColumnType(hsql::ColumnType column_type) -> ColumnType;
 
 
 }

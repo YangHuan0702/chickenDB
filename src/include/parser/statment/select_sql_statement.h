@@ -13,12 +13,10 @@ namespace chickenDB {
         }
         ~SelectStatement() override = default;
 
-        auto AddColumn(const std::string &column_name) -> void {
-            this->columns_.push_back(std::move(column_name));
-        }
-
         std::string table_;
 
-        std::vector<std::string> columns_;
+        std::vector<std::unique_ptr<ParserExpression>> columns_;
+
+        std::unique_ptr<ParserExpression> where_;
     };
 }

@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "sql_statement.h"
-#include "common/types/value.h"
+#include "../../common/value.h"
 
 namespace chickenDB {
     class InsertStatement : public SQLStatement {
@@ -16,7 +16,7 @@ namespace chickenDB {
 
         ~InsertStatement() override = default;
 
-        auto AddColumn(const std::string &column_name, Value value) -> void {
+        auto AddColumn(const std::string &column_name, std::unique_ptr<ParserExpression> value) -> void {
             columns_.push_back(column_name);
             values_.push_back(std::move(value));
         }
@@ -25,6 +25,6 @@ namespace chickenDB {
 
         std::vector<std::string> columns_;
 
-        std::vector<Value> values_;
+        std::vector<std::unique_ptr<ParserExpression>> values_{};
     };
 }
