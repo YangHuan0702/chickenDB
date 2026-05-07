@@ -18,8 +18,28 @@ auto Transformer::TransformerSelectStatement(hsql::SQLStatement *statement) -> s
         }
     }
 
+    // where
     if (select_statement->whereClause != nullptr) {
         r->where_ = TransformerExpression(select_statement->whereClause);
+    }
+
+    // group by
+    if (select_statement->groupBy != nullptr) {
+        for (auto group_expr : *select_statement->groupBy->columns) {
+            r->group_.push_back(TransformerExpression(group_expr));
+        }
+
+        // having
+        if (select_statement->groupBy->having != nullptr) {
+            r->having_ = TransformerExpression(select_statement->groupBy->having);
+        }
+    }
+
+    // order by
+    if (select_statement->order != nullptr) {
+        for (auto order_statement : *select_statement->order) {
+            r->order_.push_back(TransformerExpression(order_statement->expr));
+        }
     }
     return r;
 }

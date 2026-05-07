@@ -18,5 +18,11 @@ namespace chickenDB {
         std::vector<std::unique_ptr<ParserExpression>> columns_;
 
         std::unique_ptr<ParserExpression> where_;
+
+        std::vector<std::unique_ptr<ParserExpression>> group_;
+        std::unique_ptr<ParserExpression> having_;
+
+        std::vector<std::unique_ptr<ParserExpression>> order_;
+
     };
 }
