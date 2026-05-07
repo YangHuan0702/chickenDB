@@ -4,6 +4,7 @@
 
 #pragma once
 #include "SQLParserResult.h"
+#include "expression/expression.h"
 #include "sql/CreateStatement.h"
 #include "statment/sql_statement.h"
 
@@ -24,6 +25,12 @@ namespace chickenDB {
 
 
         auto TransformerExpression(hsql::Expr *) -> std::unique_ptr<ParserExpression>;
+        auto TransformerOperatorExpression(hsql::Expr *) -> std::unique_ptr<ParserExpression>;
+        auto TransformerBinaryOperator(hsql::Expr *) -> std::unique_ptr<ParserExpression>;
+        auto TransformerUnaryOperator(hsql::Expr *) -> std::unique_ptr<ParserExpression>;
+        auto TransformerStar(hsql::Expr *) -> std::unique_ptr<ParserExpression>;
+        auto TransformerColumnRef(hsql::Expr *) -> std::unique_ptr<ParserExpression>;
+        auto TransformerConstant(hsql::Expr *) -> std::unique_ptr<ParserExpression>;
 
 
     };

@@ -19,4 +19,7 @@ namespace chickenDB {
     typedef uint8_t data_t;
     typedef data_t *data_ptr_t;
     typedef const data_t *const_data_ptr_t;
+
+    constexpr int PAGE_MAGIC_NUM = 0x3f;
+
 }

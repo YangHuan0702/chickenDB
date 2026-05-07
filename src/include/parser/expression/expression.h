@@ -8,7 +8,7 @@ namespace chickenDB {
 
     class ParserExpression {
     public:
-        ParserExpression(ParserExpressionType type) : type_(type){}
+        explicit ParserExpression(ParserExpressionType type) : type_(type){}
         virtual ~ParserExpression() = default;
 
         ParserExpressionType type_;

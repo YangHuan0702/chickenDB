@@ -5,7 +5,7 @@
 
 namespace chickenDB {
 
-    enum class BinaryOpExpression {
+    enum class BinaryOpExpressionType {
         AND,
         OR,
         GT,
@@ -16,6 +16,12 @@ namespace chickenDB {
         SUB,
         MUL,
         DRI,
+        EQ,
+        NE,
+        LIKE,
+        NOT_LIKE,
+        ILIKE,
+        IN
     };
 
 }

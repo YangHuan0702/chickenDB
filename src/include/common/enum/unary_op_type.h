@@ -6,8 +6,6 @@
 namespace chickenDB {
 
     enum class UnaryOpType {
-        EQ,
-        NEQ,
         IS_NULL,
         NON_NULL,
     };

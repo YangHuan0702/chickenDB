@@ -1,8 +1,17 @@
 //
 // Created by 杨欢 on 2026/5/6.
 //
+#pragma once
+#include "expression.h"
+#include "common/value.h"
 
-#ifndef CHICKENDB_CONSTANT_EXPRESSION_H
-#define CHICKENDB_CONSTANT_EXPRESSION_H
+namespace chickenDB {
+    class ConstantExpression : public ParserExpression {
+    public:
+        explicit ConstantExpression(const Value &val) : ParserExpression(ParserExpressionType::CONSTANT), val_(val) {
+        }
+        ~ConstantExpression() override = default;
 
-#endif //CHICKENDB_CONSTANT_EXPRESSION_H
+        Value val_;
+    };
+}

@@ -11,7 +11,6 @@ namespace chickenDB {
         BINARY_OP,
         UNARY_OP,
         IN,
-        NOT_IN
     };
 
 }
