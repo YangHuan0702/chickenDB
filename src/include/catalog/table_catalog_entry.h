@@ -18,7 +18,7 @@ namespace chickenDB {
     };
 
     struct TableCatalogEntry {
-        obj_id_t table_id{0}; // 全局唯一表 ID
+        table_id_t table_id{0}; // 全局唯一表 ID
         char table_name[TABLE_NAME_MAX_LEN]{}; // 表名，定长简化实现
         uint32_t schema_page_id{0}; // 最新 Schema Page
         uint32_t segment_index_page_id{0}; // Segment 索引入口

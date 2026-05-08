@@ -1,0 +1,4 @@
+add_library(CHICKEN_BINDER_EXPRESSION OBJECT bound_binary_expression.cpp bound_column_expression.cpp bound_constant_expression.cpp bound_unary_expression.cpp)
+
+
+set(ALL_OBJECT_FILES ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:CHICKEN_BINDER_EXPRESSION> PARENT_SCOPE)

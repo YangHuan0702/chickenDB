@@ -54,7 +54,7 @@ namespace chickenDB {
         return GetTable(table_iter->second);
     }
 
-    auto Catalog::GetTable(obj_id_t table_id) const -> const TableCatalogEntry * {
+    auto Catalog::GetTable(table_id_t table_id) const -> const TableCatalogEntry * {
         const auto entry_iter = table_entry_map_.find(table_id);
         if (entry_iter == table_entry_map_.end() || !entry_iter->second.IsActive()) {
             return nullptr;
@@ -62,7 +62,7 @@ namespace chickenDB {
         return &entry_iter->second;
     }
 
-    auto Catalog::GetSchema(obj_id_t table_id) const -> const SchemaPage * {
+    auto Catalog::GetSchema(table_id_t table_id) const -> const SchemaPage * {
         const auto entry = GetTable(table_id);
         if (entry == nullptr) {
             return nullptr;
@@ -79,7 +79,7 @@ namespace chickenDB {
         return GetTable(table_name) != nullptr;
     }
 
-    auto Catalog::AllocateTableId() -> obj_id_t {
+    auto Catalog::AllocateTableId() -> table_id_t {
         return next_table_id_++;
     }
 
