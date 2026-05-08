@@ -11,4 +11,7 @@ namespace chickenDB {
 
     typedef uint64_t obj_id_t;
 
+    typedef uint64_t table_id_t;
+
+    typedef uint32_t fs_id_t;
 }

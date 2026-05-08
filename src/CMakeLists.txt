@@ -1,13 +1,15 @@
 add_subdirectory(parser)
 add_subdirectory(common)
 add_subdirectory(catalog)
+add_subdirectory(disk)
 
 add_library(chickenDB STATIC ${ALL_OBJECT_FILES})
 
 set(CHICKEN_LIB
         CHICKEN_PARSER
         CHICKEN_COMMON
-        CHICKEN_CATALOG)
+        CHICKEN_CATALOG
+        CHICKEN_DISK)
 
 find_package(Threads REQUIRED)
 get_target_property(_glog_type glog::glog TYPE)

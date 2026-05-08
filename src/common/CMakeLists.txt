@@ -1,3 +1,3 @@
-add_library(CHICKEN_COMMON OBJECT statement_type.cpp)
+add_library(CHICKEN_COMMON OBJECT statement_type.cpp string_utils.cpp)
 
 set(ALL_OBJECT_FILES ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:CHICKEN_COMMON> PARENT_SCOPE)
