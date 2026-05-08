@@ -3,6 +3,7 @@
 //
 #pragma once
 #include <cstdint>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -24,9 +25,11 @@ namespace chickenDB {
 
     private:
 
-        auto InitFile(table_id_t,size_t) -> void;
+        auto InitFile(table_id_t table_id, size_t frame_id) -> void;
+        auto CloseFrame(size_t frame_id) -> void;
 
         std::unordered_map<table_id_t, size_t> tables_{};
+        std::unordered_map<size_t, table_id_t> frame_table_map_{};
         std::vector<std::shared_ptr<std::fstream>> files_;
         FileLruManager file_lru_manager_;
 

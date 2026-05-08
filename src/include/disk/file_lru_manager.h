@@ -5,6 +5,7 @@
 #include <list>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 #include "common/types.h"
 
@@ -24,8 +25,14 @@ namespace chickenDB {
         auto Evict() -> size_t;
 
     private:
-        std::unordered_map<table_id_t, size_t> tables_{};
-        std::list<table_id_t> queue_;
+        struct FrameState {
+            size_t pin_count{0};
+            bool evictable{false};
+        };
+
+        std::vector<FrameState> frames_;
+        std::list<size_t> evictable_frames_;
+        std::unordered_map<size_t, std::list<size_t>::iterator> evictable_iters_;
 
         std::mutex mutex_;
     };
