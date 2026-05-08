@@ -4,10 +4,10 @@
 #pragma once
 #include <cstdint>
 
+#include "common/chicken_execption.h"
 #include "sql/ColumnType.h"
 
 namespace chickenDB {
-
     enum class StatementType : uint8_t {
         INSERT = 1,
         SELECT = 2,
@@ -25,9 +25,4 @@ namespace chickenDB {
         VARCHAR2,
         DOUBLE,
     };
-
-
-    static auto ConversionChickenDBColumnType(hsql::ColumnType column_type) -> ColumnType;
-
-
 }

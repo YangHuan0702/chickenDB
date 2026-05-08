@@ -12,6 +12,7 @@ namespace chickenDB {
     class Parser {
     public:
         explicit Parser() = default;
+        ~Parser() = default;
 
         void ParserQuery(const std::string &querySQL);
 

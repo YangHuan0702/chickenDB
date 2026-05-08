@@ -8,5 +8,4 @@ namespace chickenDB {
 #define PAGE_SIZE (1024 * 256)
 
 
-
 }

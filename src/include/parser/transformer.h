@@ -15,7 +15,7 @@ namespace chickenDB {
         auto TransformerAST(hsql::SQLParserResult &result,
                             std::vector<std::unique_ptr<SQLStatement> > &statment) -> void;
 
-        auto TransformerStatement(const hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
+        auto TransformerStatement(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
 
         auto TransformerSelectStatement(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
         auto TransformerInsertStatement( hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
