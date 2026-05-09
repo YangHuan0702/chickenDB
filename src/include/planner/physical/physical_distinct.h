@@ -1,0 +1,8 @@
+//
+// Created by huan.yang on 2026-05-09.
+//
+
+#ifndef CHICKENDB_PHYSICAL_DISTINCT_H
+#define CHICKENDB_PHYSICAL_DISTINCT_H
+
+#endif //CHICKENDB_PHYSICAL_DISTINCT_H
