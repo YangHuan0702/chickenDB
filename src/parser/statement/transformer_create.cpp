@@ -1,6 +1,7 @@
 //
 // Created by huan.yang on 2026-04-30.
 //
+#include "common/chicken_execption.h"
 #include "parser/transformer.h"
 #include "parser/statment/create_table_statement.h"
 #include "sql/CreateStatement.h"

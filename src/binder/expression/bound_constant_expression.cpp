@@ -13,7 +13,7 @@ auto Binder::BoundConstantExpression(
     ChickenException::AssertCondition(expr->type_ == ParserExpressionType::CONSTANT,
                                       "[Binder] bound expression type not is constant.");
 
-    auto parser_column_expression = dynamic_cast<ConstantExpression *>(expr.release());
+    auto parser_column_expression = dynamic_cast<ConstantExpression *>(expr.get());
 
     return std::make_unique<chickenDB::BoundConstantExpression>(parser_column_expression->val_);
 }

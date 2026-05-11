@@ -2,25 +2,26 @@
 // Created by huan.yang on 2026-05-08.
 //
 #pragma once
+#include <string>
 #include <vector>
 
 #include "bound_statement.h"
-#include "common/types.h"
+#include "parser/column_define.h"
 
 namespace chickenDB {
     class BoundCreateStatement : public BoundStatement {
     public:
-        explicit BoundCreateStatement(table_id_t table_id) : BoundStatement(StatementType::CREATE),
-                                                             table_id_(table_id) {
+        explicit BoundCreateStatement(std::string table_name) : BoundStatement(StatementType::CREATE),
+                                                                table_name_(std::move(table_name)) {
         }
 
         ~BoundCreateStatement() override = default;
 
-        auto AddColumn(col_id_t col_id) -> void {
-            this->col_ids_.push_back(col_id);
+        auto AddColumn(ColumnDefine col) -> void {
+            this->columns_.push_back(col);
         }
 
-        table_id_t table_id_;
-        std::vector<col_id_t> col_ids_;
+        std::string table_name_;
+        std::vector<ColumnDefine> columns_;
     };
 }

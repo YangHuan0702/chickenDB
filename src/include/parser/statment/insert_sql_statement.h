@@ -3,6 +3,7 @@
 //
 #pragma once
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "sql_statement.h"
@@ -11,12 +12,12 @@
 namespace chickenDB {
     class InsertStatement : public SQLStatement {
     public:
-        InsertStatement(const std::string &table_name) : SQLStatement(StatementType::INSERT), table_name_(table_name) {
+        explicit InsertStatement(std::string table_name) : SQLStatement(StatementType::INSERT), table_name_(std::move(table_name)) {
         }
 
         ~InsertStatement() override = default;
 
-        auto AddColumn(const std::string &column_name, std::unique_ptr<ParserExpression> value) -> void {
+        auto AddColumn(const std::string &column_name, Value value) -> void {
             columns_.push_back(column_name);
             values_.push_back(std::move(value));
         }
@@ -25,6 +26,6 @@ namespace chickenDB {
 
         std::vector<std::string> columns_;
 
-        std::vector<std::unique_ptr<ParserExpression>> values_{};
+        std::vector<Value> values_{};
     };
 }

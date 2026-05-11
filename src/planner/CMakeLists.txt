@@ -1,0 +1,5 @@
+add_subdirectory(logical)
+
+add_library(CHICKEN_PLANNER OBJECT planner.cpp)
+
+set(ALL_OBJECT_FILES ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:CHICKEN_PLANNER> PARENT_SCOPE)

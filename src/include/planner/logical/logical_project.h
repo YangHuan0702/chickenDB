@@ -11,10 +11,9 @@ namespace chickenDB {
 
     class LogicalProject : public LogicalOperator {
     public:
-        explicit LogicalProject(bool is_star) : LogicalOperator(LogicalOperatorType::PROJECT),is_star_(is_star) {}
+        explicit LogicalProject() : LogicalOperator(LogicalOperatorType::PROJECT) {}
         ~LogicalProject() override = default;
 
-        bool is_star_;
         std::vector<col_id_t> col_ids_;
 
     };

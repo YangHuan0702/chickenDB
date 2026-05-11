@@ -8,6 +8,7 @@
 #include "bound_statement.h"
 #include "binder/expression/bound_expression.h"
 #include "common/types.h"
+#include "common/value.h"
 
 namespace chickenDB {
     class BoundUpdateStatement : public BoundStatement {
@@ -19,7 +20,7 @@ namespace chickenDB {
 
         table_id_t table_id_;
         std::vector<col_id_t> col_ids_;
-        std::vector<std::unique_ptr<BoundExpression> > values_;
+        std::vector<Value> values_;
         std::unique_ptr<BoundExpression> where_;
     };
 }

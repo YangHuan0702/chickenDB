@@ -12,7 +12,7 @@ using namespace chickenDB;
 auto Binder::BoundColumnExpression(std::unique_ptr<ParserExpression> expr) -> std::unique_ptr<class chickenDB::BoundExpression> {
     ChickenException::AssertCondition(expr->type_ == ParserExpressionType::COLUMN, "[Binder] bound expression type not is column.");
 
-    auto parser_column_expression = dynamic_cast<ColumnRefExpression *>(expr.release());
+    auto parser_column_expression = dynamic_cast<ColumnRefExpression *>(expr.get());
 
     auto table_catalog_entry = catalog_->GetTable(parser_column_expression->table_name_);
     ChickenException::AssertCondition(table_catalog_entry != nullptr, "[Binder] bound column expression error, unknown table:"+parser_column_expression->table_name_);

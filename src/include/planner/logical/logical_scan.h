@@ -17,7 +17,5 @@ namespace chickenDB {
         ~LogicalScan() override = default;
 
         table_id_t table_id_;
-        std::vector<col_id_t> columns_;
-        std::vector<std::unique_ptr<BoundExpression>> filters_;
     };
 }

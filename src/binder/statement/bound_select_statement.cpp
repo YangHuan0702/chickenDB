@@ -11,7 +11,7 @@ using namespace chickenDB;
 auto Binder::BinderSelectStatement(std::unique_ptr<SQLStatement> statement) -> std::unique_ptr<BoundStatement> {
     ChickenException::AssertCondition(statement->type_ == StatementType::SELECT,
                                       "[Binder] target parser statement is not select type.");
-    auto parser_select_statement = dynamic_cast<SelectStatement *>(statement.release());
+    auto parser_select_statement = dynamic_cast<SelectStatement *>(statement.get());
 
     auto table_catalog_entry = catalog_->GetTable(parser_select_statement->table_);
     ChickenException::AssertCondition(table_catalog_entry != nullptr,

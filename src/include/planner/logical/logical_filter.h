@@ -11,7 +11,7 @@
 namespace chickenDB {
     class LogicalFilter : public LogicalOperator {
     public:
-        explicit LogicalFilter() : LogicalOperator(LogicalOperatorType::FILTER) {
+        explicit LogicalFilter(std::unique_ptr<BoundExpression> condition) : LogicalOperator(LogicalOperatorType::FILTER),condition_(std::move(condition)) {
         }
 
         ~LogicalFilter() override = default;

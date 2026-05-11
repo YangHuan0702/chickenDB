@@ -4,9 +4,6 @@
 #pragma once
 #include <cstdint>
 
-#include "common/chicken_execption.h"
-#include "sql/ColumnType.h"
-
 namespace chickenDB {
     enum class StatementType : uint8_t {
         INSERT = 1,

@@ -12,7 +12,7 @@ using namespace chickenDB;
 auto Binder::BinderDeleteStatement(std::unique_ptr<SQLStatement> statement) -> std::unique_ptr<BoundStatement> {
     ChickenException::AssertCondition(statement->type_ == StatementType::DELETE,
                                       "[Binder] target parser statement is not delete type.");
-    auto parser_delete_statement = dynamic_cast<DeleteStatement*>(statement.release());
+    auto parser_delete_statement = dynamic_cast<DeleteStatement*>(statement.get());
 
     auto table_catalog_entry = catalog_->GetTable(parser_delete_statement->table_name_);
     ChickenException::AssertCondition(table_catalog_entry != nullptr,"[Binder] Unknown table " + parser_delete_statement->table_name_);

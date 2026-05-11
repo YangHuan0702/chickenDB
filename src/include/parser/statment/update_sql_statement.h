@@ -18,7 +18,7 @@ namespace chickenDB {
         ~UpdateStatement() override = default;
 
         std::vector<std::string> columns_;
-        std::vector<std::unique_ptr<ParserExpression>> values_{};
+        std::vector<Value> values_{};
         std::string table_name_;
         std::unique_ptr<ParserExpression> where_;
     };

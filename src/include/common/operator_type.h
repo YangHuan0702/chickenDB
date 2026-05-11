@@ -12,6 +12,10 @@ namespace chickenDB {
         AGGREGATE,
         SORT,
         LIMIT,
+        CREATEA_TABLE,
+        DELETE,
+        UPDATE,
+        INSERT,
     };
 
     enum class PhysicalOperatorType {

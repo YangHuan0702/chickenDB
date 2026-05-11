@@ -11,7 +11,7 @@ using namespace chickenDB;
 auto Binder::BoundBinaryExpression(std::unique_ptr<ParserExpression> expr) -> std::unique_ptr<class BoundExpression> {
     ChickenException::AssertCondition(expr->type_ == ParserExpressionType::BINARY_OP, "[Binder] bound expression type not is binary.");
 
-    auto parser_binary_expression = dynamic_cast<BinaryOpExpression *>(expr.release());
+    auto parser_binary_expression = dynamic_cast<BinaryOpExpression *>(expr.get());
 
     auto bound_binary_expression = std::make_unique<chickenDB::BoundBinaryExpression>(parser_binary_expression->type_);
 

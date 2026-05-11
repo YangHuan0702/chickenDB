@@ -14,7 +14,7 @@ auto Binder::BoundUnaryExpression(
     ChickenException::AssertCondition(expr->type_ == ParserExpressionType::UNARY_OP,
                                       "[Binder] bound expression type not is unary.");
 
-    auto parser_unary_expression = dynamic_cast<UnaryOpExpression *>(expr.release());
+    auto parser_unary_expression = dynamic_cast<UnaryOpExpression *>(expr.get());
 
     auto bound_unary_expression = std::make_unique<chickenDB::BoundUnaryExpression>(parser_unary_expression->type_);
 

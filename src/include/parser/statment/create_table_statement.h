@@ -8,14 +8,9 @@
 #include <vector>
 
 #include "sql_statement.h"
+#include "parser/column_define.h"
 
 namespace chickenDB {
-
-    struct ColumnDefine {
-        std::string name_;
-        ColumnType type_;
-        size_t size_;
-    };
 
 
     class CreateTableStatement : public SQLStatement {
