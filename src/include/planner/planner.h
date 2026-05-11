@@ -25,6 +25,9 @@ namespace chickenDB {
         auto LogicalCreatePlanner(std::unique_ptr<BoundStatement> bound_statement) -> std::unique_ptr<LogicalOperator>;
 
 
+        auto CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_operator) ->std::unique_ptr <PhysicalOperator>;
+
+
     private:
         auto LogicalOperatorScan(table_id_t table_id) -> std::unique_ptr<LogicalOperator>;
         auto LogicalOperatorFilter(std::unique_ptr<BoundExpression> statement) -> std::unique_ptr<LogicalOperator>;

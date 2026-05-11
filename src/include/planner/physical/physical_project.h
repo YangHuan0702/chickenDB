@@ -1,8 +1,20 @@
 //
 // Created by huan.yang on 2026-05-09.
 //
+#pragma once
+#include <vector>
 
-#ifndef CHICKENDB_PHYSICAL_PROJECT_H
-#define CHICKENDB_PHYSICAL_PROJECT_H
+#include "physical_operator.h"
+#include "common/types.h"
 
-#endif //CHICKENDB_PHYSICAL_PROJECT_H
+namespace chickenDB {
+    class PhysicalProject : public PhysicalOperator {
+    public:
+        explicit PhysicalProject() : PhysicalOperator(PhysicalOperatorType::Project) {
+        }
+
+        ~PhysicalProject() override = default;
+
+        std::vector<col_id_t> cols_;
+    };
+}

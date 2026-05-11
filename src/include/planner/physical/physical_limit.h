@@ -1,8 +1,21 @@
 //
 // Created by huan.yang on 2026-05-09.
 //
+#pragma once
+#include <vector>
 
-#ifndef CHICKENDB_PHYSICAL_LIMIT_H
-#define CHICKENDB_PHYSICAL_LIMIT_H
+#include "physical_operator.h"
 
-#endif //CHICKENDB_PHYSICAL_LIMIT_H
+namespace chickenDB {
+    class PhysicalLimit : public PhysicalOperator {
+    public:
+        explicit PhysicalLimit(size_t start, size_t offset) : PhysicalOperator(PhysicalOperatorType::Limit),
+                                                              start_(start), offset_(offset) {
+        }
+
+        ~PhysicalLimit() override = default;
+
+        size_t start_;
+        size_t offset_;
+    };
+}

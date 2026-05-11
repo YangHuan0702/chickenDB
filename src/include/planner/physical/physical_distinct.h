@@ -2,7 +2,20 @@
 // Created by huan.yang on 2026-05-09.
 //
 
-#ifndef CHICKENDB_PHYSICAL_DISTINCT_H
-#define CHICKENDB_PHYSICAL_DISTINCT_H
+#pragma once
+#include <vector>
 
-#endif //CHICKENDB_PHYSICAL_DISTINCT_H
+#include "physical_operator.h"
+#include "common/types.h"
+
+namespace chickenDB {
+    class PhysicalDistinct : public PhysicalOperator {
+    public:
+        explicit PhysicalDistinct() : PhysicalOperator(PhysicalOperatorType::Distinct) {
+        }
+
+        ~PhysicalDistinct() override = default;
+
+        std::vector<col_id_t> cols_;
+    };
+}
