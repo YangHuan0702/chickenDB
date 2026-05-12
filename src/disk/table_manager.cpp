@@ -37,39 +37,38 @@ auto GetFilePath(table_id_t table_id) -> std::string {
 
 
 auto LRUTableManager::InitFile(table_id_t table_id, size_t frame_id) -> void {
-    files_[frame_id] = std::make_shared<std::fstream>();
+    auto fs = std::make_unique<std::fstream>();
+
     std::string file_path = GetFilePath(table_id);
     std::error_code error_code;
     std::filesystem::create_directories(std::filesystem::path(file_path).parent_path(), error_code);
     ChickenException::AssertCondition(!error_code, "Could not create data directory: " + error_code.message());
 
-    files_[frame_id]->open(file_path, std::ios::in | std::ios::out | std::ios::binary);
-    if (!files_[frame_id]->is_open()) {
+    fs->open(file_path, std::ios::in | std::ios::out | std::ios::binary);
+    if (!fs->is_open()) {
         std::ofstream create_file(file_path, std::ios::binary);
         ChickenException::AssertCondition(create_file.is_open(), "Could not create file " + file_path);
         create_file.close();
-        files_[frame_id]->open(file_path, std::ios::in | std::ios::out | std::ios::binary);
+        fs->open(file_path, std::ios::in | std::ios::out | std::ios::binary);
     }
 
-    ChickenException::AssertCondition(files_[frame_id]->is_open(), "Could not open file " + file_path);
+    ChickenException::AssertCondition(fs->is_open(), "Could not open file " + file_path);
     tables_[table_id] = frame_id;
     frame_table_map_[frame_id] = table_id;
+    auto file_desc = std::make_shared<FileDesc>(table_id,std::move(fs));
+    files_[frame_id] = file_desc;
 }
 
 auto LRUTableManager::CloseFrame(size_t frame_id) -> void {
     if (frame_id >= files_.size() || files_[frame_id] == nullptr) {
         return;
     }
-
-    if (files_[frame_id]->is_open()) {
-        files_[frame_id]->flush();
-        files_[frame_id]->close();
-    }
-    files_[frame_id].reset();
+    files_[frame_id]->Close();
+    // files_[frame_id].reset();
 }
 
 
-auto LRUTableManager::Acquire(table_id_t table_id) -> std::shared_ptr<std::fstream> {
+auto LRUTableManager::Acquire(table_id_t table_id) -> std::shared_ptr<FileDesc> {
     std::lock_guard<std::mutex> lock(mutex_);
     size_t frame_id = 0;
     if (tables_.find(table_id) == tables_.end()) {
