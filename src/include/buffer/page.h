@@ -3,6 +3,7 @@
 //
 #pragma once
 #include "common/macro.h"
+#include "common/types.h"
 #include <cstdint>
 
 namespace chickenDB {
@@ -63,7 +64,7 @@ namespace chickenDB {
 
         Page &operator=(const Page &) = delete;
 
-        page_id_t page_id_;
+        PageId page_id_;
         char *data{nullptr};
     };
 }
