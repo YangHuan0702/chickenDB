@@ -22,4 +22,19 @@ namespace chickenDB {
         VARCHAR2,
         DOUBLE,
     };
+
+    class TypeSizeConversion {
+    public:
+        explicit TypeSizeConversion() = default;
+
+        ~TypeSizeConversion() = default;
+
+        static auto TypeSize(ColumnType type) -> size_t {
+            switch (type) {
+                case ColumnType::NUMBER: return 4;
+                case ColumnType::DOUBLE: return 8;
+                default: return 0;
+            }
+        }
+    };
 }

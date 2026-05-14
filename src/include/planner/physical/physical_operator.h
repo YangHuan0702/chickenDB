@@ -11,6 +11,10 @@ namespace chickenDB {
         explicit PhysicalOperator(PhysicalOperatorType type) : type_(type) {};
         virtual ~PhysicalOperator() = default;
 
+        virtual auto Init() -> void = 0;
+        virtual auto Next() -> Chunk* = 0;
+        virtual auto Close() -> void = 0;
+
         PhysicalOperatorType type_;
     };
 

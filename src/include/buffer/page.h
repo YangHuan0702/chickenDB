@@ -59,13 +59,11 @@ namespace chickenDB {
         }
 
         auto ReadHeader() -> PageHeader;
-
-
-
         Page(const Page &) = delete;
 
         Page &operator=(const Page &) = delete;
 
+        page_id_t page_id_;
         char *data{nullptr};
     };
 }

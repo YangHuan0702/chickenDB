@@ -4,6 +4,8 @@ add_subdirectory(catalog)
 add_subdirectory(disk)
 add_subdirectory(binder)
 add_subdirectory(planner)
+add_subdirectory(buffer)
+add_subdirectory(executor)
 
 add_library(chickenDB STATIC ${ALL_OBJECT_FILES})
 
@@ -13,7 +15,10 @@ set(CHICKEN_LIB
         CHICKEN_CATALOG
         CHICKEN_DISK
         CHICKEN_BINDER
-        CHICKEN_PLANNER)
+        CHICKEN_PLANNER
+        CHICKEN_BUFFER
+        CHICKEN_EXECUTOR
+)
 
 find_package(Threads REQUIRED)
 get_target_property(_glog_type glog::glog TYPE)
