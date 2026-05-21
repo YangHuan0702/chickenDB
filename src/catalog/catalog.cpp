@@ -75,16 +75,13 @@ static void DeserializeSchema(const Page *page, SchemaPage &schema) {
 static constexpr size_t kMaxEntriesPerCatalogPage =
     (PAGE_SIZE - sizeof(TableCatalogPageHeader)) / sizeof(TableCatalogEntry);
 
-// ─── 构造函数 ──────────────────────────────────────────────────────────────
-
-Catalog::Catalog(BufferManager *buffer_manager) : buffer_manager_(buffer_manager) {
+Catalog::Catalog(std::shared_ptr<BufferManager> buffer_manager) : buffer_manager_(std::move(buffer_manager)) {
     // 磁盘模式：schema 页从 page 2 开始（0=root, 1=catalog 链表头）
     next_free_page_no_ = 2;
     LoadFromDisk();
 }
 
 // ─── 磁盘生命周期 ──────────────────────────────────────────────────────────
-
 auto Catalog::InitFreshDisk() -> void {
     // Page 0：根元数据页
     RootMetaPageStruct root_info{};
