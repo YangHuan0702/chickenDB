@@ -24,6 +24,9 @@ namespace chickenDB {
         // 从 buffer pool 获取页面，不在 pool 中则从磁盘加载
         auto FetchPage(table_id_t table_id, page_id_t page_no) -> Page *;
 
+        // 重启后从持久化元数据恢复某张表的页号计数器
+        auto InitNextPageNo(table_id_t table_id, page_id_t next_no) -> void;
+
         // 释放对页面的引用，is_dirty 表示是否修改过
         auto UnpinPage(table_id_t table_id, page_id_t page_no, bool is_dirty) -> bool;
 

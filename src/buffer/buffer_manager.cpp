@@ -145,6 +145,11 @@ auto BufferManager::NewPage(table_id_t table_id) -> Page * {
     return pages_[frame_id].get();
 }
 
+auto BufferManager::InitNextPageNo(table_id_t table_id, page_id_t next_no) -> void {
+    std::lock_guard<std::mutex> lock(mutex_);
+    next_page_no_[table_id] = next_no;
+}
+
 auto BufferManager::DeletePage(table_id_t table_id, page_id_t page_no) -> bool {
     std::lock_guard<std::mutex> lock(mutex_);
 
