@@ -248,8 +248,10 @@ auto Catalog::PersistRootMeta() -> void {
 // ─── 表操作 ────────────────────────────────────────────────────────────────
 
 auto Catalog::CreateTable(const CreateTableStatement &statement, uint64_t create_ts) -> TableCatalogEntry {
+    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+
     ChickenException::AssertCondition(!statement.table_name_.empty(), "table name can not be empty");
-    ChickenException::AssertCondition(!TableExists(statement.table_name_),
+    ChickenException::AssertCondition(GetTableLocked(statement.table_name_) == nullptr,
                                       "table already exists: " + statement.table_name_);
     ChickenException::AssertCondition(!statement.columns_.empty(),
                                       "table must contain at least one column");
@@ -280,7 +282,9 @@ auto Catalog::CreateTable(const CreateTableStatement &statement, uint64_t create
 }
 
 auto Catalog::DropTable(const std::string &table_name, uint64_t drop_ts) -> bool {
-    const auto table_iter = table_name_map_.find(table_name);
+    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+
+    const auto table_iter = table_name_map_.find(table_name); // 直接查 map，无需再调 GetTableLocked
     if (table_iter == table_name_map_.end()) return false;
 
     const auto entry_iter = table_entry_map_.find(table_iter->second);
@@ -299,29 +303,44 @@ auto Catalog::DropTable(const std::string &table_name, uint64_t drop_ts) -> bool
     return true;
 }
 
+// ─── 无锁内部查询（调用方须已持锁）────────────────────────────────────────
+
+auto Catalog::GetTableLocked(const std::string &table_name) const -> const TableCatalogEntry * {
+    const auto it = table_name_map_.find(table_name);
+    if (it == table_name_map_.end()) return nullptr;
+    return GetTableLocked(it->second);
+}
+
+auto Catalog::GetTableLocked(table_id_t table_id) const -> const TableCatalogEntry * {
+    const auto it = table_entry_map_.find(table_id);
+    if (it == table_entry_map_.end() || !it->second.IsActive()) return nullptr;
+    return &it->second;
+}
+
+// ─── 公共查询接口（加锁后委托内部方法）────────────────────────────────────
+
 auto Catalog::GetTable(const std::string &table_name) const -> const TableCatalogEntry * {
-    const auto table_iter = table_name_map_.find(table_name);
-    if (table_iter == table_name_map_.end()) return nullptr;
-    return GetTable(table_iter->second);
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    return GetTableLocked(table_name);
 }
 
 auto Catalog::GetTable(table_id_t table_id) const -> const TableCatalogEntry * {
-    const auto entry_iter = table_entry_map_.find(table_id);
-    if (entry_iter == table_entry_map_.end() || !entry_iter->second.IsActive()) return nullptr;
-    return &entry_iter->second;
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    return GetTableLocked(table_id);
 }
 
 auto Catalog::GetSchema(table_id_t table_id) const -> const SchemaPage * {
-    const auto entry = GetTable(table_id);
-    if (entry == nullptr) return nullptr;
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
 
-    const auto schema_iter = schema_map_.find(table_id);
-    if (schema_iter == schema_map_.end()) return nullptr;
-    return schema_iter->second.get();
+    if (GetTableLocked(table_id) == nullptr) return nullptr;
+    const auto it = schema_map_.find(table_id);
+    if (it == schema_map_.end()) return nullptr;
+    return it->second.get();
 }
 
 auto Catalog::TableExists(const std::string &table_name) const -> bool {
-    return GetTable(table_name) != nullptr;
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    return GetTableLocked(table_name) != nullptr;
 }
 
 // ─── 内部分配 ──────────────────────────────────────────────────────────────

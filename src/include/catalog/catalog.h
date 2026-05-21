@@ -3,6 +3,7 @@
 //
 #pragma once
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 
@@ -44,6 +45,10 @@ public:
     std::unordered_map<table_id_t, std::unique_ptr<SchemaPage>> schema_map_;
 
 private:
+    // 无锁内部查询（供已持锁的方法内部复用）
+    auto GetTableLocked(const std::string &table_name) const -> const TableCatalogEntry *;
+    auto GetTableLocked(table_id_t table_id) const -> const TableCatalogEntry *;
+
     auto AllocateTableId() -> table_id_t;
     // 纯内存模式返回顺序 ID（从 1 开始）；磁盘模式返回实际页号
     auto AllocateSchemaPageNo() -> page_id_t;
@@ -66,6 +71,9 @@ private:
     page_id_t current_catalog_page_no_{CATALOG_FIRST_TABLE_PAGE_NO};
     // table_id → 存储它的 catalog 页号（用于 DropTable 定位更新位置）
     std::unordered_map<table_id_t, page_id_t> entry_page_map_;
+
+    // 读写锁：GetTable/GetSchema 持共享锁，CreateTable/DropTable 持排他锁
+    mutable std::shared_mutex rw_mutex_;
 };
 
 }
