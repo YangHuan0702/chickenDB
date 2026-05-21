@@ -13,6 +13,12 @@ namespace chickenDB {
                                                               start_(start), offset_(offset) {
         }
 
+        auto Init() -> void override;
+
+        auto Next() -> Chunk * override;
+
+        auto Close() -> void override;
+
         ~PhysicalLimit() override = default;
 
         size_t start_;

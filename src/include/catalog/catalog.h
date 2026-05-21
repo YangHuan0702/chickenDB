@@ -40,31 +40,27 @@ public:
     std::unordered_map<table_id_t, std::unique_ptr<SchemaPage>> schema_map_;
 
 private:
-    // 无锁内部查询（供已持锁的方法内部复用）
     auto GetTableLocked(const std::string &table_name) const -> const TableCatalogEntry *;
     auto GetTableLocked(table_id_t table_id) const -> const TableCatalogEntry *;
 
     auto AllocateTableId() -> table_id_t;
-    // 纯内存模式返回顺序 ID（从 1 开始）；磁盘模式返回实际页号
     auto AllocateSchemaPageNo() -> page_id_t;
     auto BuildInitialSchema(const CreateTableStatement &statement, uint64_t create_ts)
         -> std::unique_ptr<SchemaPage>;
 
-    auto AllocateDiskPage() -> Page *;          // NewPage + 更新 next_free_page_no_
-    auto PersistSchema(const SchemaPage &schema) -> page_id_t; // 写 schema page，返回页号
+    auto AllocateDiskPage() -> Page *;
+    auto PersistSchema(const SchemaPage &schema) -> page_id_t;
     auto PersistNewEntry(const TableCatalogEntry &entry) -> void;
     auto PersistUpdatedEntry(table_id_t table_id) -> void;
     auto PersistRootMeta() -> void;
 
     table_id_t next_table_id_{1};
-    // 纯内存时：schema 顺序 ID（从 1 开始）；磁盘时：catalog 文件下一个空闲页号
     page_id_t next_free_page_no_{1};
 
     std::shared_ptr<BufferManager> buffer_manager_{nullptr};
     page_id_t current_catalog_page_no_{CATALOG_FIRST_TABLE_PAGE_NO};
     std::unordered_map<table_id_t, page_id_t> entry_page_map_;
 
-    // 读写锁：GetTable/GetSchema 持共享锁，CreateTable/DropTable 持排他锁
     mutable std::shared_mutex rw_mutex_;
 };
 

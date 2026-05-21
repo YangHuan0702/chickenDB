@@ -15,6 +15,12 @@ namespace chickenDB {
                                                                                expression_(std::move(expression)) {
         }
 
+        auto Init() -> void override;
+
+        auto Next() -> Chunk * override;
+
+        auto Close() -> void override;
+
         ~PhysicalFilter() override = default;
 
         std::unique_ptr<BoundExpression> expression_;

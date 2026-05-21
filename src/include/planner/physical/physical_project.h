@@ -13,6 +13,12 @@ namespace chickenDB {
         explicit PhysicalProject() : PhysicalOperator(PhysicalOperatorType::Project) {
         }
 
+        auto Init() -> void override;
+
+        auto Next() -> Chunk * override;
+
+        auto Close() -> void override;
+
         ~PhysicalProject() override = default;
 
         std::vector<col_id_t> cols_;

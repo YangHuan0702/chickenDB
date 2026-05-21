@@ -8,6 +8,7 @@
 #include "binder/statement/bound_statement.h"
 #include "catalog/catalog.h"
 #include "logical/logical_operator.h"
+#include "physical/physical_operator.h"
 
 namespace chickenDB {
 
@@ -25,7 +26,18 @@ namespace chickenDB {
         auto LogicalCreatePlanner(std::unique_ptr<BoundStatement> bound_statement) -> std::unique_ptr<LogicalOperator>;
 
 
-        auto CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_operator) ->std::unique_ptr <PhysicalOperator>;
+        auto CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_operator) ->std::unique_ptr<PhysicalOperator>;
+        auto PhysicalFilterOperator(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalProjectOperator(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalJoinOperator(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalAggregateOperator(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalScanOperator(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalSortOperator(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalLimitOperator(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalCreateTable(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalDelete(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalUpdate(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalInsert(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
 
 
     private:

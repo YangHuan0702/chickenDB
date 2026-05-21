@@ -3,6 +3,7 @@
 //
 #pragma once
 #include "common/operator_type.h"
+#include "executor/chunk.h"
 
 namespace chickenDB {
 
@@ -16,6 +17,7 @@ namespace chickenDB {
         virtual auto Close() -> void = 0;
 
         PhysicalOperatorType type_;
+        std::unique_ptr<PhysicalOperator> children_;
     };
 
 }

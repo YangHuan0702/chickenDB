@@ -14,14 +14,6 @@
 
 namespace chickenDB {
 
-// ─── 序列化辅助 ────────────────────────────────────────────────────────────
-// 所有结构体均为 POD，直接 memcpy 到 Page::data。
-//
-// RootMetaPage 布局：data[0 .. sizeof(RootMetaPageStruct)]
-// TableCatalogPage 布局：[TableCatalogPageHeader][TableCatalogEntry × N]
-// SchemaPage 布局：[SchemaVersion][ColDef × N]
-// ──────────────────────────────────────────────────────────────────────────
-
 static void SerializeRootMeta(Page *page, const RootMetaPageStruct &info) {
     std::memcpy(page->data, &info, sizeof(RootMetaPageStruct));
 }
@@ -159,7 +151,6 @@ auto Catalog::LoadFromDisk() -> void {
     }
 }
 
-// ─── 磁盘辅助函数 ──────────────────────────────────────────────────────────
 
 auto Catalog::AllocateDiskPage() -> Page * {
     Page *page = buffer_manager_->NewPage(CATALOG_TABLE_ID);
@@ -242,7 +233,6 @@ auto Catalog::PersistRootMeta() -> void {
     buffer_manager_->UnpinPage(CATALOG_TABLE_ID, CATALOG_ROOT_PAGE_NO, true);
 }
 
-// ─── 表操作 ────────────────────────────────────────────────────────────────
 
 auto Catalog::CreateTable(const CreateTableStatement &statement, uint64_t create_ts) -> TableCatalogEntry {
     std::unique_lock<std::shared_mutex> lock(rw_mutex_);
@@ -300,7 +290,6 @@ auto Catalog::DropTable(const std::string &table_name, uint64_t drop_ts) -> bool
     return true;
 }
 
-// ─── 无锁内部查询（调用方须已持锁）────────────────────────────────────────
 
 auto Catalog::GetTableLocked(const std::string &table_name) const -> const TableCatalogEntry * {
     const auto it = table_name_map_.find(table_name);
@@ -314,7 +303,6 @@ auto Catalog::GetTableLocked(table_id_t table_id) const -> const TableCatalogEnt
     return &it->second;
 }
 
-// ─── 公共查询接口（加锁后委托内部方法）────────────────────────────────────
 
 auto Catalog::GetTable(const std::string &table_name) const -> const TableCatalogEntry * {
     std::shared_lock<std::shared_mutex> lock(rw_mutex_);
@@ -340,7 +328,6 @@ auto Catalog::TableExists(const std::string &table_name) const -> bool {
     return GetTableLocked(table_name) != nullptr;
 }
 
-// ─── 内部分配 ──────────────────────────────────────────────────────────────
 
 auto Catalog::AllocateTableId() -> table_id_t {
     return next_table_id_++;

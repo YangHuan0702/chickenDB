@@ -4,17 +4,23 @@
 #pragma once
 #include <memory>
 
+#include "catalog/catalog.h"
 #include "catalog/table_catalog_entry.h"
 #include "planner/physical/physical_operator.h"
 
 namespace chickenDB {
-
     class PhysicalSeqScan : public PhysicalOperator {
     public:
-        explicit PhysicalSeqScan(const TableCatalogEntry *table_catalog_entry) : PhysicalOperator(PhysicalOperatorType::SeqScan),table_(table_catalog_entry) {}
+        explicit PhysicalSeqScan(std::shared_ptr<Catalog> catalog) : PhysicalOperator(PhysicalOperatorType::SeqScan),
+                                                                     catalog_(std::move(catalog)){}
         ~PhysicalSeqScan() override = default;
 
-        const TableCatalogEntry *table_;
-    };
+        auto Init() -> void override;
 
+        auto Next() -> Chunk * override;
+
+        auto Close() -> void override;
+
+        std::shared_ptr<Catalog> catalog_;
+    };
 }

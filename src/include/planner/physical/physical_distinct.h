@@ -14,6 +14,12 @@ namespace chickenDB {
         explicit PhysicalDistinct() : PhysicalOperator(PhysicalOperatorType::Distinct) {
         }
 
+        auto Init() -> void override;
+
+        auto Next() -> Chunk * override;
+
+        auto Close() -> void override;
+
         ~PhysicalDistinct() override = default;
 
         std::vector<col_id_t> cols_;

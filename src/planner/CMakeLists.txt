@@ -1,4 +1,5 @@
 add_subdirectory(logical)
+add_subdirectory(physical)
 
 add_library(CHICKEN_PLANNER OBJECT planner.cpp)
 
