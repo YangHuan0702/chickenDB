@@ -15,4 +15,8 @@ namespace chickenDB {
 
 #define LRU_MAX_PIN 5
 
+// Background flusher: wake interval and dirty-ratio trigger
+#define K_FLUSH_INTERVAL_MS 200
+#define K_DIRTY_FLUSH_RATIO 0.30
+
 }
