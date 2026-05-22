@@ -37,6 +37,8 @@ TEST(Executor,BasicCreateTableExecutorTest) {
     std::string table_name = "users";
     auto table_catalog_entry = catalog->GetTable(table_name);
     ASSERT_NE(table_catalog_entry, nullptr);
+
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 

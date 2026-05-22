@@ -66,14 +66,14 @@ auto BufferManager::EvictFrame(frame_id_t frame_id) -> void {
         fd->disk_manager_->WritePage(old_pid.page_no, pages_[frame_id].get());
         table_manager_->Release(old_pid.table_id);
         dirty_[frame_id] = false;
-        dirty_count_--;
+        --dirty_count_;
     }
     page_table_.erase(old_pid);
     pages_[frame_id]->page_id_ = INVALID_PAGE_ID;
 }
 
 auto BufferManager::FetchPage(table_id_t table_id, page_id_t page_no) -> Page * {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
 
     PageId pid{table_id, page_no};
     auto it = page_table_.find(pid);
@@ -100,7 +100,7 @@ auto BufferManager::FetchPage(table_id_t table_id, page_id_t page_no) -> Page * 
 }
 
 auto BufferManager::UnpinPage(table_id_t table_id, page_id_t page_no, bool is_dirty) -> bool {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
 
     PageId pid{table_id, page_no};
     auto it = page_table_.find(pid);
@@ -124,7 +124,7 @@ auto BufferManager::UnpinPage(table_id_t table_id, page_id_t page_no, bool is_di
 }
 
 auto BufferManager::FlushPage(table_id_t table_id, page_id_t page_no) -> bool {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
 
     PageId pid{table_id, page_no};
     auto it = page_table_.find(pid);
@@ -143,7 +143,7 @@ auto BufferManager::FlushPage(table_id_t table_id, page_id_t page_no) -> bool {
 }
 
 auto BufferManager::NewPage(table_id_t table_id) -> Page * {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
 
     auto frame_id = FindVictimFrame();
     EvictFrame(frame_id);
@@ -166,12 +166,12 @@ auto BufferManager::NewPage(table_id_t table_id) -> Page * {
 }
 
 auto BufferManager::InitNextPageNo(table_id_t table_id, page_id_t next_no) -> void {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
     next_page_no_[table_id] = next_no;
 }
 
 auto BufferManager::DeletePage(table_id_t table_id, page_id_t page_no) -> bool {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
 
     PageId pid{table_id, page_no};
     auto it = page_table_.find(pid);
@@ -185,7 +185,7 @@ auto BufferManager::DeletePage(table_id_t table_id, page_id_t page_no) -> bool {
     page_table_.erase(it);
     if (dirty_[frame_id]) {
         dirty_[frame_id] = false;
-        dirty_count_--;
+        --dirty_count_;
     }
     pages_[frame_id]->page_id_ = INVALID_PAGE_ID;
     free_list_.push_back(frame_id);
@@ -193,10 +193,9 @@ auto BufferManager::DeletePage(table_id_t table_id, page_id_t page_no) -> bool {
 }
 
 auto BufferManager::FlushDirtyUnpinned() -> void {
-    // Phase 1: collect candidates without holding the main lock too long
     std::vector<frame_id_t> candidates;
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         candidates.reserve(dirty_count_.load());
         for (auto &[pid, frame_id] : page_table_) {
             if (dirty_[frame_id] && pin_count_[frame_id] == 0) {
@@ -205,12 +204,10 @@ auto BufferManager::FlushDirtyUnpinned() -> void {
         }
     }
 
-    // Phase 2: flush one page at a time, re-acquiring the lock per write
-    // so foreground operations can interleave between flushes
     for (auto frame_id : candidates) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         if (!dirty_[frame_id] || pin_count_[frame_id] != 0) {
-            continue;  // State changed since collection
+            continue;  
         }
         const PageId &pid = pages_[frame_id]->page_id_;
         if (!pid.IsValid()) {
@@ -220,7 +217,7 @@ auto BufferManager::FlushDirtyUnpinned() -> void {
         fd->disk_manager_->WritePage(pid.page_no, pages_[frame_id].get());
         table_manager_->Release(pid.table_id);
         dirty_[frame_id] = false;
-        dirty_count_--;
+        --dirty_count_;
     }
 }
 

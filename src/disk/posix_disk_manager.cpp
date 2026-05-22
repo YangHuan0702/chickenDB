@@ -19,6 +19,7 @@ auto PosixDiskManager::WritePage(page_id_t page_id, Page *page) -> bool {
     size_t offset = page_id * page_size_;
     fs_->seekp(offset);
     fs_->write(page->data,page_size_);
+    fs_->flush();
     return true;
 }
 
