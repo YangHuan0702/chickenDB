@@ -81,9 +81,8 @@ auto Planner::CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_ope
 
     if (!logical_operator->children_.empty()) {
         for (auto &operator_ : logical_operator->children_) {
-            physical_operator->children_.push_back(CreatePhysicalPlanner(std::move(operator_)));
+            physical_operator->children_ = CreatePhysicalPlanner(std::move(operator_));
         }
     }
     return physical_operator;
 }
-

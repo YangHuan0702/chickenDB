@@ -4,6 +4,7 @@
 #include "binder/statement/bound_select_statement.h"
 
 #include "binder/binder.h"
+#include "common/chicken_execption.h"
 #include "parser/statment/select_sql_statement.h"
 using namespace chickenDB;
 

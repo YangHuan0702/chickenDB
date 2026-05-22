@@ -4,6 +4,7 @@
 #include "binder/expression/bound_unary_expression.h"
 
 #include "binder/binder.h"
+#include "common/chicken_execption.h"
 #include "parser/expression/unary_op_expression.h"
 
 using namespace chickenDB;

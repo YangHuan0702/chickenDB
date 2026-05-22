@@ -259,7 +259,7 @@ auto Catalog::CreateTable(const std::string& table_name,const std::vector<Column
         entry.schema_page_id = static_cast<uint32_t>(AllocateSchemaPageNo());
     }
 
-    table_name_map_.emplace(statement.table_name_, table_id);
+    table_name_map_.emplace(table_name, table_id);
     table_entry_map_.emplace(table_id, entry);
     schema_map_.emplace(table_id, std::move(schema));
 

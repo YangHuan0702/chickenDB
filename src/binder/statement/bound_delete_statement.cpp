@@ -4,6 +4,7 @@
 #include "binder/statement/bound_delete_statement.h"
 
 #include "binder/binder.h"
+#include "common/chicken_execption.h"
 #include "parser/statment/delete_sql_statement.h"
 
 using namespace chickenDB;
@@ -23,4 +24,3 @@ auto Binder::BinderDeleteStatement(std::unique_ptr<SQLStatement> statement) -> s
 
     return bound_delete_statement;
 }
-

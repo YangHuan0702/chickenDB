@@ -4,6 +4,7 @@
 #include "binder/expression/bound_column_expression.h"
 
 #include "binder/binder.h"
+#include "common/chicken_execption.h"
 #include "parser/expression/column_expression.h"
 
 using namespace chickenDB;
@@ -31,4 +32,3 @@ auto Binder::BoundColumnExpression(std::unique_ptr<ParserExpression> expr) -> st
 
     return std::make_unique<chickenDB::BoundColumnExpression>(table_catalog_entry->table_id,id);
 }
-

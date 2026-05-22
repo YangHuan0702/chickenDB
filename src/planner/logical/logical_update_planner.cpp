@@ -19,6 +19,6 @@ auto Planner::LogicalUpdatePlanner(std::unique_ptr<BoundStatement> bound_stateme
     auto logical_update = std::make_unique<LogicalUpdate>(table_catalog_entry);
     logical_update->col_ids_ = std::move(bound_update_statement->col_ids_);
     logical_update->values_ = std::move(bound_update_statement->values_);
-    logical_update->children_.push_back(LogicalOperatorForExpression(std::move(bound_update_statement->where_)));
+    logical_update->children_.push_back(LogicalOperatorFilter(std::move(bound_update_statement->where_)));
     return logical_update;
 }

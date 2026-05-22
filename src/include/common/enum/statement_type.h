@@ -2,6 +2,7 @@
 // Created by huan.yang on 2026-04-30.
 //
 #pragma once
+#include <cstddef>
 #include <cstdint>
 
 namespace chickenDB {

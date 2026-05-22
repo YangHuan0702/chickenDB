@@ -4,6 +4,7 @@
 #include "binder/expression/bound_binary_expression.h"
 
 #include "binder/binder.h"
+#include "common/chicken_execption.h"
 #include "parser/expression/binary_op_expression.h"
 
 using namespace chickenDB;

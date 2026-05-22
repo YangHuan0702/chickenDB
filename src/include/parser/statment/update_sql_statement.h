@@ -3,6 +3,7 @@
 //
 #pragma once
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "sql_statement.h"
@@ -11,8 +12,8 @@
 namespace chickenDB {
     class UpdateStatement : public SQLStatement {
     public:
-        explicit UpdateStatement( std::string &table_name) : SQLStatement(StatementType::UPDATE),
-                                                                  table_name_(table_name) {
+        explicit UpdateStatement(std::string table_name) : SQLStatement(StatementType::UPDATE),
+                                                                  table_name_(std::move(table_name)) {
         }
 
         ~UpdateStatement() override = default;

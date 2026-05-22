@@ -21,7 +21,7 @@ auto Planner::LogicalDeletePlanner(
 
     auto logical_delete = std::make_unique<LogicalDelete>(table);
 
-    logical_delete->children_.push_back(LogicalOperatorForExpression(std::move(delete_statement->where_)));
+    logical_delete->children_.push_back(LogicalOperatorFilter(std::move(delete_statement->where_)));
 
     return logical_delete;
 }
