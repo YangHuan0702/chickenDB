@@ -3,13 +3,13 @@
 //
 #include "buffer/buffer_manager.h"
 #include "buffer/clock_sweep_lru.h"
-#include "common/chicken_execption.h"
 #include <cstring>
+#include <utility>
 
 using namespace chickenDB;
 
-BufferManager::BufferManager(LRUTableManager *table_manager, size_t capacity)
-    : table_manager_(table_manager),
+BufferManager::BufferManager(std::shared_ptr<LRUTableManager> table_manager, size_t capacity)
+    : table_manager_(std::move(table_manager)),
       capacity_(capacity),
       pages_(capacity),
       pin_count_(capacity, 0),

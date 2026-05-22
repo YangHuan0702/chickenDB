@@ -25,6 +25,6 @@ namespace chickenDB {
 
         std::string table_name_;
         std::vector<ColumnDefine> columns_;
-        uint64_t create_ts_;
+        uint64_t create_ts_{0};
     };
 }

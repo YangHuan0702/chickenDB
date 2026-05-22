@@ -18,7 +18,7 @@ namespace chickenDB {
 
     class BufferManager {
     public:
-        explicit BufferManager(LRUTableManager *table_manager, size_t capacity = K_DEFAULT_CAPACITY);
+        explicit BufferManager(std::shared_ptr<LRUTableManager> table_manager, size_t capacity = K_DEFAULT_CAPACITY);
         ~BufferManager();
 
         // 从 buffer pool 获取页面，不在 pool 中则从磁盘加载
@@ -47,8 +47,8 @@ namespace chickenDB {
         // 将 frame 刷盘并从 page_table_ 中移除，调用前须持有 mutex_
         auto EvictFrame(frame_id_t frame_id) -> void;
 
-        LRUTableManager *table_manager_;
-        size_t capacity_;
+        std::shared_ptr<LRUTableManager> table_manager_;
+        size_t capacity_ [[maybe_unused]];
 
         // per-table 本地页号计数器（受 mutex_ 保护）
         std::unordered_map<table_id_t, page_id_t> next_page_no_;

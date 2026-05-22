@@ -9,7 +9,7 @@ namespace chickenDB {
     class Execution : public Executor {
     public:
         explicit Execution(std::unique_ptr<ExecutorContext> context) : Executor(std::move(context)) {}
-        virtual ~Execution() = default;
+        ~Execution() override = default;
 
         auto Exec(std::unique_ptr<PhysicalOperator> plan) -> void override;
 

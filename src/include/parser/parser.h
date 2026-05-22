@@ -16,7 +16,6 @@ namespace chickenDB {
 
         void ParserQuery(const std::string &querySQL);
 
-    private:
         std::vector<std::unique_ptr<SQLStatement>> statements_;
     };
 }

@@ -15,7 +15,7 @@ namespace chickenDB {
 
     class LRUTableManager {
     public:
-        explicit LRUTableManager(uint32_t capacity);
+        explicit LRUTableManager(uint32_t capacity = K_LRU_FILE_CAPACITY);
         ~LRUTableManager();
 
         auto Acquire(table_id_t table_id) -> std::shared_ptr<FileDesc>;

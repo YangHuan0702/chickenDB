@@ -24,6 +24,7 @@ auto Planner::CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_ope
     if (nullptr == logical_operator) {
         return nullptr;
     }
+    auto unique_ptrs = std::move(logical_operator->children_);
 
     std::unique_ptr<PhysicalOperator> physical_operator = nullptr;
     switch (logical_operator->type_) {
@@ -79,7 +80,7 @@ auto Planner::CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_ope
         throw std::invalid_argument("[Planner] Create physical operator null");
     }
 
-    if (!logical_operator->children_.empty()) {
+    if (!unique_ptrs.empty()) {
         for (auto &operator_ : logical_operator->children_) {
             physical_operator->children_ = CreatePhysicalPlanner(std::move(operator_));
         }

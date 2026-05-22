@@ -11,6 +11,8 @@ namespace chickenDB {
 
 #define K_DEFAULT_CAPACITY 2048
 
+#define K_LRU_FILE_CAPACITY 1024
+
 #define LRU_MAX_PIN 5
 
 }
