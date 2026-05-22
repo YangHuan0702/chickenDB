@@ -25,7 +25,7 @@ public:
 
     ~Catalog() = default;
 
-    auto CreateTable(const CreateTableStatement &statement, uint64_t create_ts = 0) -> TableCatalogEntry;
+    auto CreateTable(const std::string& table_name,const std::vector<ColumnDefine>& colums_, uint64_t create_ts = 0) -> TableCatalogEntry;
     auto DropTable(const std::string &table_name, uint64_t drop_ts = 0) -> bool;
     auto GetTable(const std::string &table_name) const -> const TableCatalogEntry *;
     auto GetTable(table_id_t table_id) const -> const TableCatalogEntry *;
@@ -45,7 +45,7 @@ private:
 
     auto AllocateTableId() -> table_id_t;
     auto AllocateSchemaPageNo() -> page_id_t;
-    auto BuildInitialSchema(const CreateTableStatement &statement, uint64_t create_ts)
+    auto BuildInitialSchema(const std::string& table_name,const std::vector<ColumnDefine>& colums_, uint64_t create_ts)
         -> std::unique_ptr<SchemaPage>;
 
     auto AllocateDiskPage() -> Page *;

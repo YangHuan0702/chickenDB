@@ -234,21 +234,21 @@ auto Catalog::PersistRootMeta() -> void {
 }
 
 
-auto Catalog::CreateTable(const CreateTableStatement &statement, uint64_t create_ts) -> TableCatalogEntry {
+auto Catalog::CreateTable(const std::string& table_name,const std::vector<ColumnDefine>& colums_, uint64_t create_ts) -> TableCatalogEntry {
     std::unique_lock<std::shared_mutex> lock(rw_mutex_);
 
-    ChickenException::AssertCondition(!statement.table_name_.empty(), "table name can not be empty");
-    ChickenException::AssertCondition(GetTableLocked(statement.table_name_) == nullptr,
-                                      "table already exists: " + statement.table_name_);
-    ChickenException::AssertCondition(!statement.columns_.empty(),
+    ChickenException::AssertCondition(!table_name.empty(), "table name can not be empty");
+    ChickenException::AssertCondition(GetTableLocked(table_name) == nullptr,
+                                      "table already exists: " + table_name);
+    ChickenException::AssertCondition(!colums_.empty(),
                                       "table must contain at least one column");
 
     const auto table_id = AllocateTableId();
-    auto schema = BuildInitialSchema(statement, create_ts);
+    auto schema = BuildInitialSchema(table_name,colums_, create_ts);
 
     TableCatalogEntry entry;
     entry.table_id   = table_id;
-    entry.SetTableName(statement.table_name_);
+    entry.SetTableName(table_name);
     entry.create_ts  = create_ts;
 
     if (buffer_manager_ != nullptr) {
@@ -337,14 +337,14 @@ auto Catalog::AllocateSchemaPageNo() -> page_id_t {
     return next_free_page_no_++;
 }
 
-auto Catalog::BuildInitialSchema(const CreateTableStatement &statement, uint64_t create_ts)
+auto Catalog::BuildInitialSchema(const std::string& table_name,const std::vector<ColumnDefine>& colums_, uint64_t create_ts)
     -> std::unique_ptr<SchemaPage> {
     auto schema = std::make_unique<SchemaPage>();
     schema->version_.version      = 1;
     schema->version_.effective_ts = create_ts;
 
     col_id_t next_col_id = 1;
-    for (const auto &column : statement.columns_) {
+    for (const auto &column : colums_) {
         ColDef col_def;
         col_def.col_id      = next_col_id++;
         col_def.SetColumnName(column.name_);

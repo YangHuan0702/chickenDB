@@ -7,11 +7,12 @@
 namespace chickenDB {
     TEST(CatalogTest, CreateAndLookupTable) {
         Catalog catalog;
+        std::string table_name = "users";
         CreateTableStatement statement("users");
         statement.AddColumn({"id", ColumnType::NUMBER, 0});
         statement.AddColumn({"name", ColumnType::VARCHAR, 64});
 
-        const auto entry = catalog.CreateTable(statement, 100);
+        const auto entry = catalog.CreateTable(table_name,statement.columns_, 100);
 
         EXPECT_EQ(entry.table_id, 1);
         EXPECT_EQ(entry.GetTableName(), "users");
@@ -39,9 +40,9 @@ namespace chickenDB {
         CreateTableStatement statement("users");
         statement.AddColumn({"id", ColumnType::NUMBER, 0});
 
-        catalog.CreateTable(statement);
+        catalog.CreateTable(statement.table_name_,statement.columns_,0);
 
-        EXPECT_THROW(catalog.CreateTable(statement), ChickenException);
+        EXPECT_THROW(catalog.CreateTable(statement.table_name_,statement.columns_,0), ChickenException);
     }
 
     TEST(CatalogTest, DropTableRemovesNameLookupAndMarksEntryDropped) {
@@ -49,7 +50,7 @@ namespace chickenDB {
         CreateTableStatement statement("users");
         statement.AddColumn({"id", ColumnType::NUMBER, 0});
 
-        const auto entry = catalog.CreateTable(statement);
+        const auto entry = catalog.CreateTable(statement.table_name_,statement.columns_,0);
 
         EXPECT_TRUE(catalog.DropTable("users", 200));
         EXPECT_FALSE(catalog.TableExists("users"));

@@ -12,6 +12,10 @@ namespace chickenDB {
         virtual ~Execution() = default;
 
         auto Exec(std::unique_ptr<PhysicalOperator> plan) -> void override;
+
+    private:
+        auto ExecuteCreate(std::unique_ptr<PhysicalOperator> plan) -> void;
+
     };
 
 }

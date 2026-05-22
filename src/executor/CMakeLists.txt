@@ -1,3 +1,3 @@
-add_library(CHICKEN_EXECUTOR OBJECT chunk.cpp ddl_executor.cpp execution.cpp)
+add_library(CHICKEN_EXECUTOR OBJECT chunk.cpp execution.cpp execute_create.cpp)
 
 set(ALL_OBJECT_FILES ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:CHICKEN_EXECUTOR> PARENT_SCOPE)

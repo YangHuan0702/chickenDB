@@ -40,5 +40,7 @@ namespace chickenDB {
         Project,
         Limit,
         Distinct,
+
+        CREATE_TABLE,
     };
 }
