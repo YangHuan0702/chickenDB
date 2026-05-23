@@ -9,7 +9,7 @@ namespace chickenDB {
 
     constexpr int PAGE_MAGIC_NUM = 0x3f;
 
-#define DATA_PATH "/data/chickenDB"
+#define DATA_PATH "/Users/yanghuan/core/project/cpp-proj/chickenDB/data/chickenDB"
 
     // catalog 文件使用 table_id = 0，对应 /data/chickenDB/00...00.td
     constexpr table_id_t CATALOG_TABLE_ID        = 0;

@@ -10,7 +10,7 @@ namespace chickenDB {
 
     class PosixDiskManager : public DiskManager {
     public:
-        explicit PosixDiskManager(std::unique_ptr<std::fstream> fs);
+        explicit PosixDiskManager(int fd);
         ~PosixDiskManager() override;
 
         auto ReadPage(page_id_t page_id, Page *page) -> bool override;
@@ -20,7 +20,7 @@ namespace chickenDB {
         auto SetPageSize(size_t) -> void override;
 
     private:
-        std::unique_ptr<std::fstream> fs_;
+        int fd_;
         size_t page_size_{PAGE_SIZE};
     };
 

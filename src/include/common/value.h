@@ -9,9 +9,9 @@
 namespace chickenDB {
     class Value {
     public:
-        explicit Value(const std::variant<std::monostate,int,char,long long,std::string,float,double,int64_t>& value) : value_(value) {}
+        explicit Value(const std::variant<std::monostate,int,char,std::string,float,double,int64_t>& value) : value_(value) {}
         ~Value() = default;
 
-        std::variant<std::monostate,int,char,long long,std::string,float,double,int64_t> value_;
+        std::variant<std::monostate,int,char,std::string,float,double,int64_t> value_;
     };
 }

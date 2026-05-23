@@ -8,7 +8,7 @@ using namespace chickenDB;
 
 
 auto Transformer::TransformerConstant(hsql::Expr *expr) -> std::unique_ptr<ParserExpression> {
-    std::variant<std::monostate,int, char, long long, std::string, float, double, int64_t> value;
+    std::variant<std::monostate,int, char, std::string, float, double, int64_t> value;
     switch (expr->type) {
         case hsql::kExprLiteralFloat:
             value = expr->fval;

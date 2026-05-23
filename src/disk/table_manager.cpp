@@ -37,25 +37,25 @@ auto GetFilePath(table_id_t table_id) -> std::string {
 
 
 auto LRUTableManager::InitFile(table_id_t table_id, size_t frame_id) -> void {
-    auto fs = std::make_unique<std::fstream>();
+    // auto fs = std::make_unique<std::fstream>();
 
     std::string file_path = GetFilePath(table_id);
     std::error_code error_code;
     std::filesystem::create_directories(std::filesystem::path(file_path).parent_path(), error_code);
     ChickenException::AssertCondition(!error_code, "Could not create data directory: " + error_code.message());
 
-    fs->open(file_path, std::ios::in | std::ios::out | std::ios::binary);
-    if (!fs->is_open()) {
-        std::ofstream create_file(file_path, std::ios::binary);
-        ChickenException::AssertCondition(create_file.is_open(), "Could not create file " + file_path);
-        create_file.close();
-        fs->open(file_path, std::ios::in | std::ios::out | std::ios::binary);
-    }
+    // fs->open(file_path, std::ios::in | std::ios::out | std::ios::binary);
+    // if (!fs->is_open()) {
+    //     std::ofstream create_file(file_path, std::ios::binary);
+    //     ChickenException::AssertCondition(create_file.is_open(), "Could not create file " + file_path);
+    //     create_file.close();
+    //     fs->open(file_path, std::ios::in | std::ios::out | std::ios::binary);
+    // }
 
-    ChickenException::AssertCondition(fs->is_open(), "Could not open file " + file_path);
+    // ChickenException::AssertCondition(fs->is_open(), "Could not open file " + file_path);
     tables_[table_id] = frame_id;
     frame_table_map_[frame_id] = table_id;
-    auto file_desc = std::make_shared<FileDesc>(table_id,std::move(fs));
+    auto file_desc = std::make_shared<FileDesc>(table_id,file_path);
     files_[frame_id] = file_desc;
 }
 
