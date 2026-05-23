@@ -5,14 +5,13 @@
 #include <memory>
 
 #include "catalog/catalog.h"
-#include "catalog/table_catalog_entry.h"
 #include "planner/physical/physical_operator.h"
 
 namespace chickenDB {
     class PhysicalSeqScan : public PhysicalOperator {
     public:
-        explicit PhysicalSeqScan(std::shared_ptr<Catalog> catalog) : PhysicalOperator(PhysicalOperatorType::SeqScan),
-                                                                     catalog_(std::move(catalog)){}
+        explicit PhysicalSeqScan(table_id_t table_id,std::shared_ptr<Catalog> catalog) : PhysicalOperator(PhysicalOperatorType::SeqScan),
+                                                                     table_id_(table_id),catalog_(std::move(catalog)){}
         ~PhysicalSeqScan() override = default;
 
         auto Init() -> void override;
@@ -21,6 +20,7 @@ namespace chickenDB {
 
         auto Close() -> void override;
 
+        table_id_t table_id_;
         std::shared_ptr<Catalog> catalog_;
     };
 }
