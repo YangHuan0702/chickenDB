@@ -126,18 +126,18 @@ auto BufferManager::UnpinPage(table_id_t table_id, page_id_t page_no, bool is_di
 auto BufferManager::FlushPage(table_id_t table_id, page_id_t page_no) -> bool {
     std::lock_guard lock(mutex_);
 
-    PageId pid{table_id, page_no};
-    auto it = page_table_.find(pid);
+    const PageId pid{table_id, page_no};
+    const auto it = page_table_.find(pid);
     if (it == page_table_.end()) {
         return false;
     }
-    auto frame_id = it->second;
-    auto fd = table_manager_->Acquire(table_id);
+    const auto frame_id = it->second;
+    const auto fd = table_manager_->Acquire(table_id);
     fd->disk_manager_->WritePage(page_no, pages_[frame_id].get());
     table_manager_->Release(table_id);
     if (dirty_[frame_id]) {
         dirty_[frame_id] = false;
-        dirty_count_--;
+        --dirty_count_;
     }
     return true;
 }

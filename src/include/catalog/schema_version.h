@@ -17,7 +17,7 @@ namespace chickenDB {
         uint8_t reserved[6]{};
     };
 
-    class SchemaPage : public Page {
+    class SchemaPage {
     public:
         auto AddColumn(const ColDef &column) -> void {
             columns_.push_back(column);
