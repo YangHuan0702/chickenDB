@@ -5,16 +5,24 @@
 
 using namespace chickenDB;
 
-auto TableScanIterator::Begin() const -> TableScanIterator {
+auto TableScanIterator::Next(Chunk &output) -> bool {
 
 }
 
-auto TableScanIterator::End() -> TableScanIterator {
+
+auto TableScanIterator::LoadCurrentPage() -> void {
 
 }
 
-auto TableScanIterator::operator++() -> TableScanIterator & {
+
+auto TableScanIterator::FillChunkFromPage(Chunk &chunk) -> size_t {
 
 }
+
+
+auto TableScanIterator::AdvancePage() -> bool {
+
+}
+
 
 
