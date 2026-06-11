@@ -2,6 +2,10 @@
 // Created by huan.yang on 2026-05-09.
 //
 #pragma once
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "aggregate_state.h"
 #include "planner/physical/physical_operator.h"
 
@@ -23,13 +27,22 @@ namespace chickenDB {
         auto Close() -> void override;
 
 
-        std::vector<col_id_t> col_ids_{};
-        col_id_t agg_col_;
+        std::vector<col_id_t> col_ids_{}; // GROUP BY 列
+        col_id_t agg_col_;                // 聚合列
 
-        std::unordered_map<std::string,AggregateState> hash_table_;
+        // group key 序列化 -> 聚合状态 + 该组的 group-by 列值（double，用于输出）
+        struct GroupEntry {
+            AggregateState state;
+            std::vector<double> group_vals;
+        };
+        std::unordered_map<std::string, GroupEntry> hash_table_;
 
         bool is_built_{false};
-        std::unordered_map<std::string,AggregateState>::iterator emit_iter_;
+        std::unordered_map<std::string, GroupEntry>::iterator emit_iter_;
+
+    private:
+        Chunk output_;
+        // 输出列：group_by 各列(DOUBLE) + sum(DOUBLE) + count(NUMBER)。
     };
 
 }

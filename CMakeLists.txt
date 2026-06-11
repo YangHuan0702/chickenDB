@@ -41,6 +41,7 @@ set(PROJECT_THIRD_PARTY_INCLUDE_PATH
         "${PROJECT_SOURCE_DIR}/third_party/libpg_query/include"
         "${PROJECT_SOURCE_DIR}/third_party/sql-parser/src"
         "${PROJECT_SOURCE_DIR}/third_party/jsoncpp/include"
+        "${PROJECT_SOURCE_DIR}/third_party/zstd/lib"
 )
 
 include_directories(${PROJECT_INCLUDE_PATH} ${PROJECT_TEST_INCLUDE_PATH} ${PROJECT_THIRD_PARTY_INCLUDE_PATH})

@@ -3,9 +3,11 @@
 //
 #pragma once
 #include <memory>
+#include <unordered_map>
 
 #include "physical_operator.h"
 #include "binder/expression/bound_expression.h"
+#include "common/types.h"
 
 namespace chickenDB {
     class PhysicalFilter : public PhysicalOperator {
@@ -24,5 +26,9 @@ namespace chickenDB {
         ~PhysicalFilter() override = default;
 
         std::unique_ptr<BoundExpression> expression_;
+
+    private:
+        Chunk output_;
+        std::unordered_map<col_id_t, size_t> col_map_;
     };
 }

@@ -170,6 +170,12 @@ auto BufferManager::InitNextPageNo(table_id_t table_id, page_id_t next_no) -> vo
     next_page_no_[table_id] = next_no;
 }
 
+auto BufferManager::GetPageCount(table_id_t table_id) -> page_id_t {
+    std::lock_guard lock(mutex_);
+    auto it = next_page_no_.find(table_id);
+    return it == next_page_no_.end() ? 0 : it->second;
+}
+
 auto BufferManager::DeletePage(table_id_t table_id, page_id_t page_no) -> bool {
     std::lock_guard lock(mutex_);
 

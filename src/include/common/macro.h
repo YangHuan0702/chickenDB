@@ -9,6 +9,11 @@ namespace chickenDB {
 
 #define K_SIMD_ALIGNMENT 64
 
+// Rows per vector/chunk — the unit of vectorized execution. Mirrors DuckDB's
+// STANDARD_VECTOR_SIZE: large enough to amortize per-call overhead, small
+// enough to stay in L1/L2 cache.
+#define K_VECTOR_SIZE 2048
+
 #define K_DEFAULT_CAPACITY 2048
 
 #define K_LRU_FILE_CAPACITY 1024

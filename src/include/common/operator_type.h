@@ -42,5 +42,6 @@ namespace chickenDB {
         Distinct,
 
         CREATE_TABLE,
+        INSERT,
     };
 }

@@ -24,7 +24,7 @@ auto Planner::CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_ope
     if (nullptr == logical_operator) {
         return nullptr;
     }
-    auto unique_ptrs = std::move(logical_operator->children_);
+    auto logical_children = std::move(logical_operator->children_);
 
     std::unique_ptr<PhysicalOperator> physical_operator = nullptr;
     switch (logical_operator->type_) {
@@ -80,10 +80,9 @@ auto Planner::CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_ope
         throw std::invalid_argument("[Planner] Create physical operator null");
     }
 
-    if (!unique_ptrs.empty()) {
-        for (auto &operator_ : logical_operator->children_) {
-            physical_operator->children_ = CreatePhysicalPlanner(std::move(operator_));
-        }
+    // 把每个 logical 孩子物理化后挂到 children_（保留全部孩子，Join 双孩子也成立）。
+    for (auto &child : logical_children) {
+        physical_operator->children_.push_back(CreatePhysicalPlanner(std::move(child)));
     }
     return physical_operator;
 }

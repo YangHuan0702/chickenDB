@@ -1,3 +1,3 @@
-add_library(CHICKEN_PLANNER_PHYSICAL_OPERATOR OBJECT physical_seq_scan_operator.cpp)
+add_library(CHICKEN_PLANNER_PHYSICAL_OPERATOR OBJECT physical_seq_scan_operator.cpp physical_index_scan_operator.cpp)
 
 set(ALL_OBJECT_FILES ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:CHICKEN_PLANNER_PHYSICAL_OPERATOR> PARENT_SCOPE)

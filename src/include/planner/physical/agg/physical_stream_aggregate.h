@@ -2,6 +2,9 @@
 // Created by huan.yang on 2026-05-09.
 //
 #pragma once
+#include <vector>
+
+#include "aggregate_state.h"
 #include "planner/physical/physical_operator.h"
 
 namespace chickenDB {
@@ -23,6 +26,11 @@ namespace chickenDB {
 
         std::vector<col_id_t> group_by_;
         col_id_t agg_col_;
+
+    private:
+        // 一次性聚合所有有序输入，物化全部组到 output_（实现简单且足够验证语义）。
+        Chunk output_;
+        bool built_{false};
     };
 
 }

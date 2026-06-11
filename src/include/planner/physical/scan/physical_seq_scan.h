@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "catalog/catalog.h"
+#include "buffer/table_scan_iterator.h"
 #include "planner/physical/physical_operator.h"
 
 namespace chickenDB {
@@ -22,5 +23,9 @@ namespace chickenDB {
 
         table_id_t table_id_;
         std::shared_ptr<Catalog> catalog_;
+
+    private:
+        std::unique_ptr<TableScanIterator> it_;
+        Chunk current_chunk_;
     };
 }

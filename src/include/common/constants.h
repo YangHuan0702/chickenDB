@@ -2,6 +2,9 @@
 // Created by huan.yang on 2026-01-27.
 //
 #pragma once
+#include <cstdlib>
+#include <string>
+
 #include "common/types.h"
 
 namespace chickenDB {
@@ -9,7 +12,20 @@ namespace chickenDB {
 
     constexpr int PAGE_MAGIC_NUM = 0x3f;
 
-#define DATA_PATH "/Users/yanghuan/core/project/cpp-proj/chickenDB/data/chickenDB"
+    // Data directory for table files. Overridable via the CHICKENDB_DATA_PATH
+    // environment variable; defaults to a path relative to the working dir so
+    // builds/tests are portable across machines (was hardcoded to a macOS path).
+    inline auto GetDataPath() -> std::string {
+        if (const char *env = std::getenv("CHICKENDB_DATA_PATH")) {
+            if (env[0] != '\0') {
+                return std::string(env);
+            }
+        }
+        return "./data/chickenDB";
+    }
+
+    // Kept as a macro for call-site compatibility (e.g. `ss << DATA_PATH`).
+#define DATA_PATH (chickenDB::GetDataPath())
 
     // catalog 文件使用 table_id = 0，对应 /data/chickenDB/00...00.td
     constexpr table_id_t CATALOG_TABLE_ID        = 0;

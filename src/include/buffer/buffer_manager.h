@@ -42,6 +42,9 @@ namespace chickenDB {
         // 为指定表分配新页，返回已 pin 的页指针
         auto NewPage(table_id_t table_id) -> Page *;
 
+        // 返回该表已分配的页数（本地页号计数器）。扫描时用于推导页范围。
+        auto GetPageCount(table_id_t table_id) -> page_id_t;
+
         // 从 buffer pool 和磁盘删除一个页
         auto DeletePage(table_id_t table_id, page_id_t page_no) -> bool;
 

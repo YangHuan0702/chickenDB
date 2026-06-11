@@ -23,5 +23,10 @@ namespace chickenDB {
 
         size_t start_;
         size_t offset_;
+
+    private:
+        Chunk output_;
+        size_t seen_{0};      // 已从孩子读到的行数（用于跳过 start_）
+        size_t emitted_{0};   // 已输出的行数（上限 offset_）
     };
 }

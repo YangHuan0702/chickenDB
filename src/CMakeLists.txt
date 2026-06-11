@@ -6,6 +6,7 @@ add_subdirectory(binder)
 add_subdirectory(planner)
 add_subdirectory(buffer)
 add_subdirectory(executor)
+add_subdirectory(index)
 
 add_library(chickenDB STATIC ${ALL_OBJECT_FILES})
 
@@ -18,12 +19,13 @@ set(CHICKEN_LIB
         CHICKEN_PLANNER
         CHICKEN_BUFFER
         CHICKEN_EXECUTOR
+        CHICKEN_INDEX
 )
 
 find_package(Threads REQUIRED)
 get_target_property(_glog_type glog::glog TYPE)
 message(STATUS "glog::glog type = ${_glog_type}")
-set(CHICKEN_THIRD_PARTY_LIBS duckdb_pg_query sql_parser glog::glog Threads::Threads)
+set(CHICKEN_THIRD_PARTY_LIBS duckdb_pg_query sql_parser glog::glog libzstd_static Threads::Threads)
 
 target_link_libraries(chickenDB ${CHICKEN_THIRD_PARTY_LIBS} ${CHICKEN_LIB})
 target_include_directories(chickenDB PUBLIC

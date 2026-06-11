@@ -1,8 +1,32 @@
 //
 // Created by huan.yang on 2026-05-09.
 //
+#pragma once
+#include <vector>
 
-#ifndef CHICKENDB_PHYSICAL_TOP_N_H
-#define CHICKENDB_PHYSICAL_TOP_N_H
+#include "planner/physical/physical_operator.h"
+#include "common/types.h"
 
-#endif //CHICKENDB_PHYSICAL_TOP_N_H
+namespace chickenDB {
+    // TopN：排序后只保留前 n_ 行。v1 用"全排序 + 截断"实现（堆优化留 TODO）。
+    class PhysicalTopN : public PhysicalOperator {
+    public:
+        explicit PhysicalTopN(std::vector<col_id_t> sort_cols, size_t n)
+            : PhysicalOperator(PhysicalOperatorType::TopN), sort_cols_(std::move(sort_cols)), n_(n) {}
+        ~PhysicalTopN() override = default;
+
+        auto Init() -> void override;
+        auto Next() -> Chunk * override;
+        auto Close() -> void override;
+
+        std::vector<col_id_t> sort_cols_;
+        size_t n_;
+
+    private:
+        std::vector<std::vector<double>> rows_;
+        std::vector<ColumnType> types_;
+        std::vector<col_id_t> col_ids_;
+        Chunk output_;
+        bool built_{false};
+    };
+}

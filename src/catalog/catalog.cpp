@@ -11,6 +11,7 @@
 #include "common/chicken_execption.h"
 #include "common/constants.h"
 #include "common/macro.h"
+#include "index/index_factory.h"
 
 namespace chickenDB {
 
@@ -216,6 +217,62 @@ auto Catalog::PersistUpdatedEntry(table_id_t table_id) -> void {
 
     SerializeCatalogPage(cat_page, cpd);
     buffer_manager_->UnpinPage(CATALOG_TABLE_ID, page_no, true);
+}
+
+auto Catalog::AddRowCount(table_id_t table_id, uint64_t delta) -> void {
+    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+    auto it = table_entry_map_.find(table_id);
+    if (it == table_entry_map_.end()) return;
+    it->second.row_count += delta;
+    PersistUpdatedEntry(table_id);
+}
+
+auto Catalog::CreateIndex(const std::string &index_name, table_id_t table_id,
+                          const std::vector<col_id_t> &key_cols, IndexType type,
+                          bool unique) -> uint32_t {
+    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+    ChickenException::AssertCondition(!index_name.empty(), "index name can not be empty");
+    ChickenException::AssertCondition(index_name_map_.find(index_name) == index_name_map_.end(),
+                                      "index already exists: " + index_name);
+    ChickenException::AssertCondition(table_entry_map_.find(table_id) != table_entry_map_.end(),
+                                      "[CreateIndex] unknown table");
+    ChickenException::AssertCondition(!key_cols.empty(), "index must have at least one key column");
+
+    const uint32_t index_id = next_index_id_++;
+    IndexInfo info;
+    info.index_id = index_id;
+    info.index_name = index_name;
+    info.table_id = table_id;
+    info.key_cols = key_cols;
+    info.type = type;
+    info.unique = unique;
+    info.root_page_id = -1; // 内存版
+    info.index = IndexFactory::Create(type);
+
+    index_map_.emplace(index_id, std::move(info));
+    index_name_map_.emplace(index_name, index_id);
+    table_index_map_[table_id].push_back(index_id);
+    return index_id;
+}
+
+auto Catalog::GetTableIndexes(table_id_t table_id) const -> std::vector<const IndexInfo *> {
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    std::vector<const IndexInfo *> out;
+    auto it = table_index_map_.find(table_id);
+    if (it == table_index_map_.end()) return out;
+    for (uint32_t id : it->second) {
+        auto iit = index_map_.find(id);
+        if (iit != index_map_.end()) out.push_back(&iit->second);
+    }
+    return out;
+}
+
+auto Catalog::GetIndex(const std::string &index_name) const -> const IndexInfo * {
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    auto it = index_name_map_.find(index_name);
+    if (it == index_name_map_.end()) return nullptr;
+    auto iit = index_map_.find(it->second);
+    return iit == index_map_.end() ? nullptr : &iit->second;
 }
 
 auto Catalog::PersistRootMeta() -> void {

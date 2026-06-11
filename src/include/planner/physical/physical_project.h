@@ -22,5 +22,9 @@ namespace chickenDB {
         ~PhysicalProject() override = default;
 
         std::vector<col_id_t> cols_;
+
+    private:
+        Chunk output_;
+        std::vector<size_t> src_idx_; // cols_ 对应在输入 chunk 中的列下标（首批解析）
     };
 }

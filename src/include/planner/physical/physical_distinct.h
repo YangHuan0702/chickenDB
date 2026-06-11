@@ -3,6 +3,8 @@
 //
 
 #pragma once
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "physical_operator.h"
@@ -23,5 +25,9 @@ namespace chickenDB {
         ~PhysicalDistinct() override = default;
 
         std::vector<col_id_t> cols_;
+
+    private:
+        Chunk output_;
+        std::unordered_set<std::string> seen_; // 已出现的行键（各列字节拼接）
     };
 }
