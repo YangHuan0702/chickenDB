@@ -148,11 +148,13 @@ static auto Fnv1a(const char *data, size_t from, size_t to) -> uint32_t {
     }
     return h;
 }
+
+auto TableDataPage::BuildFromColumns(const std::vector<ColumnInput> &cols, uint32_t num_rows,
                                      CompressionType compression, uint64_t base_row_id,
                                      uint64_t create_ts) -> bool {
     const auto num_columns = static_cast<uint16_t>(cols.size());
     const uint16_t col_dir_offset = K_HEADER_SIZE;
-    const uint32_t data_offset = col_dir_offset + num_columns * K_COL_DIR_ENTRY_SIZE;
+    const uint32_t data_offset = col_dir_offset + num_columns * TableDataPage::K_COL_DIR_ENTRY_SIZE;
     const size_t bitmap_bytes = (num_rows + 7) / 8;
 
     // 先压缩每列数据，确定各列在数据区的偏移与大小。
@@ -175,7 +177,7 @@ static auto Fnv1a(const char *data, size_t from, size_t to) -> uint32_t {
 
     // 填充 header。
     header_.magic = static_cast<uint32_t>(PAGE_MAGIC_NUM);
-    header_.version = 1;
+    header_.version = 2; // v2：页尾带 checksum
     header_.page_type = static_cast<uint8_t>(PageType::DATA);
     header_.compression = static_cast<uint8_t>(compression);
     header_.page_id = page_->page_id_.page_no;
@@ -187,7 +189,6 @@ static auto Fnv1a(const char *data, size_t from, size_t to) -> uint32_t {
     header_.min_row_id = base_row_id;
     header_.max_row_id = num_rows == 0 ? base_row_id : base_row_id + num_rows - 1;
     header_.create_ts = create_ts;
-    header_.version = 2; // v2：页尾带 checksum
     header_.checksum = 0;
     WriteHeader();
 

@@ -23,7 +23,7 @@ auto Planner::PhysicalDelete(std::unique_ptr<LogicalOperator> logical_operator) 
             predicate = std::move(filter->condition_);
         }
     }
-    return std::make_unique<PhysicalDelete>(logical_delete->table_->table_id, std::move(predicate));
+    return std::make_unique<class PhysicalDelete>(logical_delete->table_->table_id, std::move(predicate));
 }
 
 auto PhysicalDelete::Init() -> void {}
