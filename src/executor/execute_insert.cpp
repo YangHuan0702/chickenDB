@@ -5,8 +5,10 @@
 
 #include "common/chicken_execption.h"
 #include "executor/execution.h"
+#include "executor/executor_context.h"
 #include "buffer/table_data_page.h"
 #include "planner/physical/dml/physical_insert.h"
+#include "transaction/log_record.h"
 
 using namespace chickenDB;
 
@@ -123,6 +125,46 @@ auto Execution::ExecuteInsert(std::unique_ptr<PhysicalOperator> plan) -> void {
                                          base_row_id, insert->table_->create_ts);
     context_->buffer_manager_->UnpinPage(table_id, page_no, /*is_dirty=*/true);
     ChickenException::AssertCondition(ok, "[ExecuteInsert] rows do not fit in a single page (v1 limit)");
+
+    // 事务路径：为每个新行登记版本 + 写 WAL（write-ahead：先日志后可见）。
+    if (context_->HasTxn()) {
+        const txn_id_t tid = context_->txn_->GetTxnId();
+        for (uint32_t r = 0; r < num_rows; r++) {
+            RID rid(page_no, r);
+            if (context_->log_manager_ != nullptr) {
+                LogRecord rec;
+                rec.type = LogRecordType::INSERT;
+                rec.txn_id = tid;
+                rec.table_id = table_id;
+                rec.rid_page = page_no;
+                rec.rid_row = r;
+                context_->log_manager_->Append(rec);
+            }
+            context_->version_store_->OnInsert(rid, tid);
+            context_->txn_->AppendInsert(rid);
+        }
+        if (context_->log_manager_ != nullptr) {
+            context_->log_manager_->Flush();
+        }
+    }
+
+    // 索引维护：对每个新行，按各索引键列值插入 (key, rid) 到该表的活索引。
+    for (uint32_t r = 0; r < num_rows; r++) {
+        RID rid(page_no, r);
+        auto col_value = [&](col_id_t cid) -> double {
+            for (size_t c = 0; c < schema_cols.size(); c++) {
+                if (schema_cols[c].col_id != cid) continue;
+                const char *slot = col_buffers[c].data() +
+                                   static_cast<size_t>(r) * TypeSizeConversion::TypeSize(schema_cols[c].data_type);
+                if (schema_cols[c].data_type == ColumnType::NUMBER) {
+                    int32_t iv; std::memcpy(&iv, slot, sizeof(int32_t)); return static_cast<double>(iv);
+                }
+                double dv; std::memcpy(&dv, slot, sizeof(double)); return dv;
+            }
+            return 0;
+        };
+        context_->catalog_->MaintainIndexInsert(table_id, col_value, rid);
+    }
 
     context_->catalog_->AddRowCount(table_id, num_rows);
 }

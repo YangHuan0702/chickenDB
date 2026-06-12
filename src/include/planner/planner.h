@@ -24,6 +24,7 @@ namespace chickenDB {
         auto LogicalUpdatePlanner(std::unique_ptr<BoundStatement> bound_statement) -> std::unique_ptr<LogicalOperator>;
         auto LogicalInsertPlanner(std::unique_ptr<BoundStatement> bound_statement) -> std::unique_ptr<LogicalOperator>;
         auto LogicalCreatePlanner(std::unique_ptr<BoundStatement> bound_statement) -> std::unique_ptr<LogicalOperator>;
+        auto LogicalCreateIndexPlanner(std::unique_ptr<BoundStatement> bound_statement) -> std::unique_ptr<LogicalOperator>;
 
 
         auto CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_operator) ->std::unique_ptr<PhysicalOperator>;
@@ -38,6 +39,7 @@ namespace chickenDB {
         auto PhysicalDelete(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
         auto PhysicalUpdate(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
         auto PhysicalInsert(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
+        auto PhysicalCreateIndex(std::unique_ptr<LogicalOperator>) -> std::unique_ptr<PhysicalOperator>;
 
 
     private:

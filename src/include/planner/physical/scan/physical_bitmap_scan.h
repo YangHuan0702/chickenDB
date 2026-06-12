@@ -3,17 +3,20 @@
 //
 #pragma once
 #include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "catalog/catalog.h"
 #include "buffer/table_scan_iterator.h"
+#include "buffer/table_heap.h"
 #include "planner/physical/physical_operator.h"
 #include "binder/expression/bound_expression.h"
+#include "index/index_key.h"
 
 namespace chickenDB {
-    // 位图扫描：本应先用索引生成命中行的 bitmap，再按 bitmap 批量回表读取（适合中等
-    // 选择度、多条件 AND/OR 合并 bitmap 的场景）。项目当前无索引/bitmap 结构，故 v1
-    // 退化为“全表扫描 + 谓词过滤”——结果正确，但无 bitmap 的批量定位价值。
+    // 位图扫描：用 bitmap 索引按键定位命中行的 RID 集合（点查或范围查），再按 RID
+    // 批量回表读取。未绑定可用索引时退化为全表扫描 + 谓词过滤（语义正确）。
     class PhysicalBitmapScan : public PhysicalOperator {
     public:
         explicit PhysicalBitmapScan(table_id_t table_id, std::shared_ptr<Catalog> catalog,
@@ -30,10 +33,22 @@ namespace chickenDB {
         std::shared_ptr<Catalog> catalog_;
         std::unique_ptr<BoundExpression> predicate_;
 
+        // 索引路径参数（planner 设置）：绑定 bitmap 索引 + 查找区间 [lo,hi]（点查 lo==hi）。
+        std::string index_name_;
+        IndexKey lookup_lo_;
+        IndexKey lookup_hi_;
+        bool is_range_{false};
+
     private:
+        // 索引路径状态。
+        bool use_index_{false};
+        std::unique_ptr<TableHeap> heap_;
+        std::vector<RID> rids_;
+        bool emitted_{false};
+        Chunk output_;
+        // 全扫回退状态。
         std::unique_ptr<TableScanIterator> it_;
         Chunk scan_chunk_;
-        Chunk output_;
         std::unordered_map<col_id_t, size_t> col_map_;
     };
 }

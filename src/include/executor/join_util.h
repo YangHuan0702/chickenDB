@@ -61,6 +61,15 @@ namespace chickenDB {
             return true;
         }
 
+        // 取一行在 key 列上的值序列（供哈希索引建键）。
+        static auto KeyVals(const std::vector<double> &row, const std::vector<size_t> &key_idx)
+            -> std::vector<double> {
+            std::vector<double> vals;
+            vals.reserve(key_idx.size());
+            for (size_t idx : key_idx) vals.push_back(row[idx]);
+            return vals;
+        }
+
         // 构造拼接输出 chunk 的列类型与 col_ids（左列在前，右列在后）。
         static auto BuildOutputSchema(const std::vector<ColumnType> &lt, const std::vector<col_id_t> &lid,
                                       const std::vector<ColumnType> &rt, const std::vector<col_id_t> &rid,

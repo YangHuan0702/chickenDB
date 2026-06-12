@@ -13,6 +13,7 @@
 #include "planner/physical/join/physical_merge_join.h"
 #include "planner/physical/join/physical_index_nl_join.h"
 #include "executor/join_util.h"
+#include "index/hash_index.h"
 
 using namespace chickenDB;
 
@@ -32,9 +33,9 @@ namespace {
 auto Planner::PhysicalJoinOperator(std::unique_ptr<LogicalOperator> logical_operator) -> std::unique_ptr<PhysicalOperator> {
     ChickenException::AssertCondition(logical_operator->type_ == LogicalOperatorType::JOIN,
                                       "[Planner] target logical operator is not Join type.");
-    // LogicalJoin 的等值 key 提取留待 SQL 前端补全（conditions_ 解析）。此处默认建
-    // 哈希连接占位（空 key），算子执行逻辑由单测直接构造验证。
-    return std::make_unique<PhysicalHashJoin>(std::vector<col_id_t>{}, std::vector<col_id_t>{});
+    auto *logical_join = dynamic_cast<LogicalJoin *>(logical_operator.get());
+    // 默认哈希连接（等值连接最稳）。左右 key 来自 ON 条件解析。
+    return std::make_unique<PhysicalHashJoin>(logical_join->left_keys_, logical_join->right_keys_);
 }
 
 
@@ -221,7 +222,7 @@ auto PhysicalMergeJoin::Next() -> Chunk * {
 }
 
 
-// ---- IndexNLJoin（无索引，退化为嵌套循环） ----
+// ---- IndexNLJoin：build 侧建哈希索引，probe 每行用 join key 点查（替代 O(n^2) 嵌套循环） ----
 auto PhysicalIndexNLJoin::Init() -> void {
     Child(0)->Init();
     Child(1)->Init();
@@ -237,19 +238,26 @@ auto PhysicalIndexNLJoin::Next() -> Chunk * {
     if (built_) {
         return nullptr;
     }
-    JoinRows right = JoinUtil::Materialize(Child(1), right_keys_);
-    JoinRows left = JoinUtil::Materialize(Child(0), left_keys_);
+    JoinRows left = JoinUtil::Materialize(Child(0), left_keys_);   // build 侧
+    JoinRows right = JoinUtil::Materialize(Child(1), right_keys_); // probe 侧
+
+    // 在 build 侧 join key 上建哈希索引：IndexKey -> build 行下标（编码进 RID.row_idx）。
+    HashIndex build_index;
+    for (size_t l = 0; l < left.rows.size(); l++) {
+        IndexKey key(JoinUtil::KeyVals(left.rows[l], left.key_idx));
+        build_index.Insert(key, RID(0, static_cast<uint32_t>(l)));
+    }
 
     std::vector<ColumnType> out_types;
     std::vector<col_id_t> out_ids;
     JoinUtil::BuildOutputSchema(left.types, left.col_ids, right.types, right.col_ids, out_types, out_ids);
 
+    // probe：每行用 join key 点查 build 索引，命中行拼接。
     std::vector<std::pair<size_t, size_t>> matches;
-    for (size_t l = 0; l < left.rows.size(); l++) {
-        for (size_t r = 0; r < right.rows.size(); r++) {
-            if (JoinUtil::KeysEqual(left.rows[l], left.key_idx, right.rows[r], right.key_idx)) {
-                matches.emplace_back(l, r);
-            }
+    for (size_t r = 0; r < right.rows.size(); r++) {
+        IndexKey key(JoinUtil::KeyVals(right.rows[r], right.key_idx));
+        for (const RID &rid : build_index.Find(key)) {
+            matches.emplace_back(static_cast<size_t>(rid.row_idx), r);
         }
     }
 

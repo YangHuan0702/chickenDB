@@ -173,7 +173,14 @@ auto BufferManager::InitNextPageNo(table_id_t table_id, page_id_t next_no) -> vo
 auto BufferManager::GetPageCount(table_id_t table_id) -> page_id_t {
     std::lock_guard lock(mutex_);
     auto it = next_page_no_.find(table_id);
-    return it == next_page_no_.end() ? 0 : it->second;
+    if (it != next_page_no_.end()) {
+        return it->second;
+    }
+    // 本会话未分配过该表页（如重启后）：用磁盘文件大小推算页数。
+    auto fd = table_manager_->Acquire(table_id);
+    const size_t file_size = fd->disk_manager_->GetFileSize();
+    table_manager_->Release(table_id);
+    return static_cast<page_id_t>(file_size / PAGE_SIZE);
 }
 
 auto BufferManager::DeletePage(table_id_t table_id, page_id_t page_no) -> bool {

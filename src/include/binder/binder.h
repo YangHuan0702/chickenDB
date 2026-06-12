@@ -22,6 +22,7 @@ namespace chickenDB {
         auto BinderDeleteStatement(std::unique_ptr<SQLStatement> statement) -> std::unique_ptr<BoundStatement>;
         auto BinderUpdateStatement(std::unique_ptr<SQLStatement> statement) -> std::unique_ptr<BoundStatement>;
         auto BinderCreateStatement(std::unique_ptr<SQLStatement> statement) -> std::unique_ptr<BoundStatement>;
+        auto BinderCreateIndexStatement(std::unique_ptr<SQLStatement> statement) -> std::unique_ptr<BoundStatement>;
 
 
         auto BoundExpression(std::unique_ptr<ParserExpression> expression) -> std::unique_ptr<BoundExpression>;
@@ -33,5 +34,9 @@ namespace chickenDB {
 
         std::vector<std::unique_ptr<BoundStatement> > bound_statements_;
         std::shared_ptr<Catalog> catalog_;
+
+        // 当前语句的目标表（解析无表限定的列名时用，如 SELECT a FROM t 中的 a）。
+        table_id_t current_table_id_{0};
+        bool has_current_table_{false};
     };
 }

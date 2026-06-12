@@ -27,5 +27,6 @@ namespace chickenDB {
     private:
         std::unique_ptr<TableScanIterator> it_;
         Chunk current_chunk_;
+        Chunk visible_chunk_; // MVCC 快照过滤后的输出（仅事务路径用）
     };
 }

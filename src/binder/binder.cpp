@@ -8,6 +8,7 @@ using namespace chickenDB;
 auto Binder::BinderStatement(std::unique_ptr<SQLStatement> statement) -> std::unique_ptr<BoundStatement> {
     switch (statement->type_) {
         case StatementType::CREATE: return BinderCreateStatement(std::move(statement));
+        case StatementType::CREATE_INDEX: return BinderCreateIndexStatement(std::move(statement));
         case StatementType::SELECT: return BinderSelectStatement(std::move(statement));
         case StatementType::INSERT: return BinderInsertStatement(std::move(statement));
         case StatementType::DELETE: return BinderDeleteStatement(std::move(statement));

@@ -1,5 +1,6 @@
 #include "catalog/catalog.h"
 
+#include <algorithm>
 #include <cstring>
 #include <utility>
 
@@ -12,6 +13,10 @@
 #include "common/constants.h"
 #include "common/macro.h"
 #include "index/index_factory.h"
+#include "index/index_key.h"
+#include "index/disk_b_plus_tree.h"
+#include "buffer/table_scan_iterator.h"
+#include "executor/chunk.h"
 
 namespace chickenDB {
 
@@ -115,6 +120,11 @@ auto Catalog::LoadFromDisk() -> void {
     next_free_page_no_ = static_cast<page_id_t>(root_info.total_pages);
     buffer_manager_->InitNextPageNo(CATALOG_TABLE_ID, next_free_page_no_);
 
+    // 索引定义页（存在 root meta 的 free_list_page_id 槽；0 表示尚无索引）。
+    index_catalog_page_no_ = root_info.free_list_page_id != 0
+                                 ? static_cast<page_id_t>(root_info.free_list_page_id)
+                                 : -1;
+
     // 遍历 TableCatalogPage 链表，还原内存 map
     page_id_t cat_page_no = static_cast<page_id_t>(root_info.catalog_page_id);
     while (cat_page_no > 0) {
@@ -150,6 +160,16 @@ auto Catalog::LoadFromDisk() -> void {
                           ? static_cast<page_id_t>(cpd.header.next_page_id)
                           : 0;
     }
+
+    // 重算全局 col_id 计数器 = 所有已加载 schema 的最大 col_id + 1。
+    for (const auto &kv : schema_map_) {
+        for (const auto &col : kv.second->columns_) {
+            if (col.col_id >= next_col_id_) next_col_id_ = col.col_id + 1;
+        }
+    }
+
+    // 还原索引：读定义 + 扫表重建内存索引。
+    LoadIndexes();
 }
 
 
@@ -246,12 +266,21 @@ auto Catalog::CreateIndex(const std::string &index_name, table_id_t table_id,
     info.key_cols = key_cols;
     info.type = type;
     info.unique = unique;
-    info.root_page_id = -1; // 内存版
-    info.index = IndexFactory::Create(type);
+    info.root_page_id = -1;
+
+    // B+树 + 磁盘模式：用磁盘版（节点即页，重启不需扫表重建）。其余用内存版。
+    if (type == IndexType::BPlusTree && buffer_manager_ != nullptr) {
+        auto disk = IndexFactory::CreateDiskBPlusTree(buffer_manager_, table_id, key_cols.size(), -1);
+        info.root_page_id = static_cast<DiskBPlusTreeIndex *>(disk.get())->RootPageId();
+        info.index = std::move(disk);
+    } else {
+        info.index = IndexFactory::Create(type);
+    }
 
     index_map_.emplace(index_id, std::move(info));
     index_name_map_.emplace(index_name, index_id);
     table_index_map_[table_id].push_back(index_id);
+    PersistIndexDefs(); // 索引定义落盘（磁盘模式）
     return index_id;
 }
 
@@ -275,6 +304,36 @@ auto Catalog::GetIndex(const std::string &index_name) const -> const IndexInfo *
     return iit == index_map_.end() ? nullptr : &iit->second;
 }
 
+auto Catalog::MaintainIndexInsert(table_id_t table_id,
+                                  const std::function<double(col_id_t)> &col_value,
+                                  const RID &rid) -> void {
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    auto tit = table_index_map_.find(table_id);
+    if (tit == table_index_map_.end()) return;
+    for (uint32_t id : tit->second) {
+        auto iit = index_map_.find(id);
+        if (iit == index_map_.end() || iit->second.index == nullptr) continue;
+        std::vector<double> vals;
+        for (col_id_t c : iit->second.key_cols) vals.push_back(col_value(c));
+        iit->second.index->Insert(IndexKey(vals), rid);
+    }
+}
+
+auto Catalog::MaintainIndexDelete(table_id_t table_id,
+                                  const std::function<double(col_id_t)> &col_value,
+                                  const RID &rid) -> void {
+    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    auto tit = table_index_map_.find(table_id);
+    if (tit == table_index_map_.end()) return;
+    for (uint32_t id : tit->second) {
+        auto iit = index_map_.find(id);
+        if (iit == index_map_.end() || iit->second.index == nullptr) continue;
+        std::vector<double> vals;
+        for (col_id_t c : iit->second.key_cols) vals.push_back(col_value(c));
+        iit->second.index->Erase(IndexKey(vals), rid);
+    }
+}
+
 auto Catalog::PersistRootMeta() -> void {
     if (buffer_manager_ == nullptr) return;
 
@@ -284,6 +343,9 @@ auto Catalog::PersistRootMeta() -> void {
     info.version_minor   = 0;
     info.catalog_page_id = static_cast<uint32_t>(CATALOG_FIRST_TABLE_PAGE_NO);
     info.total_pages     = static_cast<uint64_t>(next_free_page_no_);
+    // 索引定义页号存在 free_list_page_id 槽（未做空闲页链表，复用之）。
+    info.free_list_page_id = index_catalog_page_no_ >= 0
+                                 ? static_cast<uint32_t>(index_catalog_page_no_) : 0;
 
     Page *page = buffer_manager_->FetchPage(CATALOG_TABLE_ID, CATALOG_ROOT_PAGE_NO);
     SerializeRootMeta(page, info);
@@ -400,16 +462,134 @@ auto Catalog::BuildInitialSchema(const std::string& table_name,const std::vector
     schema->version_.version      = 1;
     schema->version_.effective_ts = create_ts;
 
-    col_id_t next_col_id = 1;
+    // col_id 全局唯一（跨表单调递增），使多表 JOIN 后左右列 col_id 不冲突，
+    // 表达式求值/列映射（按 col_id）无需感知列属于哪张表。
     for (const auto &column : colums_) {
         ColDef col_def;
-        col_def.col_id      = next_col_id++;
+        col_def.col_id      = next_col_id_++;
         col_def.SetColumnName(column.name_);
         col_def.data_type   = column.type_;
         col_def.type_param  = static_cast<uint16_t>(column.size_);
         schema->AddColumn(col_def);
     }
     return schema;
+}
+
+// 索引定义页布局：[uint32 count][IndexDefRecord ...]。单页（v1），足够数十个索引。
+auto Catalog::PersistIndexDefs() -> void {
+    if (buffer_manager_ == nullptr) return;
+
+    if (index_catalog_page_no_ < 0) {
+        Page *p = AllocateDiskPage();
+        index_catalog_page_no_ = p->page_id_.page_no;
+        buffer_manager_->UnpinPage(CATALOG_TABLE_ID, index_catalog_page_no_, true);
+        PersistRootMeta(); // 记录索引页号
+    }
+
+    Page *page = buffer_manager_->FetchPage(CATALOG_TABLE_ID, index_catalog_page_no_);
+    size_t offset = 0;
+    uint32_t count = static_cast<uint32_t>(index_map_.size());
+    std::memcpy(page->data + offset, &count, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    for (const auto &kv : index_map_) {
+        const IndexInfo &info = kv.second;
+        IndexDefRecord rec{};
+        rec.index_id = info.index_id;
+        std::memset(rec.index_name, 0, INDEX_NAME_MAX_LEN);
+        std::memcpy(rec.index_name, info.index_name.data(),
+                    std::min(info.index_name.size(), INDEX_NAME_MAX_LEN - 1));
+        rec.table_id = info.table_id;
+        rec.type = static_cast<uint8_t>(info.type);
+        rec.unique = info.unique ? 1 : 0;
+        rec.key_count = static_cast<uint8_t>(std::min(info.key_cols.size(), INDEX_MAX_KEY_COLS));
+        for (uint8_t i = 0; i < rec.key_count; i++) rec.key_cols[i] = info.key_cols[i];
+        rec.root_page_id = info.root_page_id;
+        std::memcpy(page->data + offset, &rec, sizeof(IndexDefRecord));
+        offset += sizeof(IndexDefRecord);
+    }
+    buffer_manager_->UnpinPage(CATALOG_TABLE_ID, index_catalog_page_no_, true);
+}
+
+auto Catalog::LoadIndexes() -> void {
+    if (buffer_manager_ == nullptr || index_catalog_page_no_ < 0) return;
+
+    Page *page = buffer_manager_->FetchPage(CATALOG_TABLE_ID, index_catalog_page_no_);
+    size_t offset = 0;
+    uint32_t count = 0;
+    std::memcpy(&count, page->data + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    for (uint32_t i = 0; i < count; i++) {
+        IndexDefRecord rec{};
+        std::memcpy(&rec, page->data + offset, sizeof(IndexDefRecord));
+        offset += sizeof(IndexDefRecord);
+
+        IndexInfo info;
+        info.index_id = rec.index_id;
+        info.index_name = std::string(rec.index_name, strnlen(rec.index_name, INDEX_NAME_MAX_LEN));
+        info.table_id = rec.table_id;
+        info.type = static_cast<IndexType>(rec.type);
+        info.unique = rec.unique != 0;
+        for (uint8_t k = 0; k < rec.key_count; k++) info.key_cols.push_back(rec.key_cols[k]);
+        info.root_page_id = rec.root_page_id;
+
+        if (rec.index_id >= next_index_id_) next_index_id_ = rec.index_id + 1;
+
+        if (info.type == IndexType::BPlusTree && info.root_page_id >= 0) {
+            // 磁盘版 B+树：直接从根页加载，无需扫表重建。
+            info.index = IndexFactory::CreateDiskBPlusTree(buffer_manager_, info.table_id,
+                                                           info.key_cols.size(), info.root_page_id);
+        } else {
+            // 内存版（Hash/Bitmap）：新建实例并扫表重填。
+            info.index = IndexFactory::Create(info.type);
+            RebuildIndex(info);
+        }
+
+        const uint32_t id = info.index_id;
+        const std::string name = info.index_name;
+        const table_id_t tid = info.table_id;
+        index_map_.emplace(id, std::move(info));
+        index_name_map_.emplace(name, id);
+        table_index_map_[tid].push_back(id);
+    }
+    buffer_manager_->UnpinPage(CATALOG_TABLE_ID, index_catalog_page_no_, false);
+}
+
+// 扫表，按索引键列构造键 + RID 填充索引实例。
+auto Catalog::RebuildIndex(IndexInfo &info) -> void {
+    const auto sit = schema_map_.find(info.table_id);
+    if (sit == schema_map_.end()) return;
+    SchemaPage *schema = sit->second.get();
+
+    // 索引列 col_id -> schema 列下标。
+    std::vector<size_t> key_idx;
+    for (col_id_t cid : info.key_cols) {
+        for (size_t i = 0; i < schema->columns_.size(); i++) {
+            if (schema->columns_[i].col_id == cid) { key_idx.push_back(i); break; }
+        }
+    }
+
+    const page_id_t page_count = buffer_manager_->GetPageCount(info.table_id);
+    const page_id_t last = page_count > 0 ? page_count - 1 : 0;
+    TableScanIterator it(info.table_id, 0, last, buffer_manager_, schema);
+
+    Chunk chunk;
+    while (it.Next(chunk)) {
+        const page_id_t page_no = it.CurrentPageNo();
+        const size_t n = chunk.Count();
+        for (size_t r = 0; r < n; r++) {
+            std::vector<double> vals;
+            vals.reserve(key_idx.size());
+            for (size_t ci : key_idx) {
+                const Vector &v = chunk.GetColumn(ci);
+                vals.push_back(v.GetType() == ColumnType::NUMBER
+                                   ? static_cast<double>(v.GetValue<int32_t>(r))
+                                   : v.GetValue<double>(r));
+            }
+            info.index->Insert(IndexKey(vals), RID(page_no, static_cast<uint32_t>(r)));
+        }
+    }
 }
 
 } // namespace chickenDB

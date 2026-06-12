@@ -25,7 +25,8 @@ auto Transformer::TransformerStatement(hsql::SQLStatement *statement) -> std::un
         case hsql::StatementType::kStmtInsert: return TransformerInsertStatement(statement);
         case hsql::StatementType::kStmtUpdate: return TransformerUpdateStatement(statement);
         case hsql::StatementType::kStmtDelete: return TransformerDeleteStatement(statement);
-        case hsql::StatementType::kStmtCreate: return TransformerCreateTable(statement);
+        case hsql::StatementType::kStmtCreate: return TransformerCreate(statement);
+        case hsql::StatementType::kStmtTransaction: return TransformerTransaction(statement);
         default: throw ChickenException("TransformerStatement: invalid statement type");
     }
 }

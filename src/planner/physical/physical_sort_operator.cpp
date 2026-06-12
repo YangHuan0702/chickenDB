@@ -126,9 +126,13 @@ auto PhysicalTopN::Next() -> Chunk * {
     if (!built_) {
         std::vector<size_t> sort_idx;
         Materialize(Child(0), rows_, types_, col_ids_, sort_idx, sort_cols_);
-        std::sort(rows_.begin(), rows_.end(), MakeComparator(sort_idx));
-        if (rows_.size() > n_) {
+        // 只需前 n_ 个有序：用 partial_sort 把最小的 n_ 个排到前面，O(N log n)，
+        // 优于全排序 O(N log N)。
+        if (n_ < rows_.size()) {
+            std::partial_sort(rows_.begin(), rows_.begin() + n_, rows_.end(), MakeComparator(sort_idx));
             rows_.resize(n_);
+        } else {
+            std::sort(rows_.begin(), rows_.end(), MakeComparator(sort_idx));
         }
         EmitRows(output_, rows_, types_, col_ids_);
         built_ = true;

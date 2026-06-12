@@ -16,6 +16,7 @@ namespace chickenDB {
         DELETE,
         UPDATE,
         INSERT,
+        CREATE_INDEX,
     };
 
     enum class PhysicalOperatorType {
@@ -43,5 +44,8 @@ namespace chickenDB {
 
         CREATE_TABLE,
         INSERT,
+        CREATE_INDEX,
+        DELETE,
+        UPDATE,
     };
 }

@@ -18,5 +18,6 @@ namespace chickenDB {
 
         std::string table_name_;
         std::string column_name_;
+        bool is_aggregate_{false}; // 来自聚合函数 SUM(col)/COUNT(col)
     };
 }

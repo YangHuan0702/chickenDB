@@ -17,6 +17,15 @@ auto Execution::Exec(std::unique_ptr<PhysicalOperator> plan) -> void {
         case PhysicalOperatorType::INSERT:
             ExecuteInsert(std::move(plan));
             break;
+        case PhysicalOperatorType::CREATE_INDEX:
+            ExecuteCreateIndex(std::move(plan));
+            break;
+        case PhysicalOperatorType::DELETE:
+            ExecuteDelete(std::move(plan));
+            break;
+        case PhysicalOperatorType::UPDATE:
+            ExecuteUpdate(std::move(plan));
+            break;
         default:
             // 其余（SeqScan/Filter/Project/Agg/Sort/Join 等）都是以 Chunk 流为输出的
             // 查询计划，走统一的 volcano 拉取循环。

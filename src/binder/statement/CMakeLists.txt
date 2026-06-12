@@ -1,3 +1,3 @@
-add_library(CHICKEN_BINDER_STATEMENT OBJECT bound_insert_statement.cpp bound_create_statement.cpp bound_delete_statement.cpp bound_select_statement.cpp bound_update_statement.cpp)
+add_library(CHICKEN_BINDER_STATEMENT OBJECT bound_insert_statement.cpp bound_create_statement.cpp bound_delete_statement.cpp bound_select_statement.cpp bound_update_statement.cpp bound_create_index_statement.cpp)
 
 set(ALL_OBJECT_FILES ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:CHICKEN_BINDER_STATEMENT> PARENT_SCOPE)

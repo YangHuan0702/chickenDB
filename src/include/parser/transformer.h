@@ -22,6 +22,9 @@ namespace chickenDB {
         auto TransformerUpdateStatement( hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
         auto TransformerDeleteStatement( hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
         auto TransformerCreateTable(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
+        auto TransformerCreate(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
+        auto TransformerCreateIndex(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
+        auto TransformerTransaction(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement>;
 
 
         auto TransformerExpression(hsql::Expr *) -> std::unique_ptr<ParserExpression>;

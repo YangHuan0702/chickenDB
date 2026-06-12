@@ -14,6 +14,7 @@ auto Planner::CreateLogicalPlanner(
         case StatementType::DELETE: return LogicalDeletePlanner(std::move(bound_statement));
         case StatementType::UPDATE: return LogicalUpdatePlanner(std::move(bound_statement));
         case StatementType::CREATE: return LogicalCreatePlanner(std::move(bound_statement));
+        case StatementType::CREATE_INDEX: return LogicalCreateIndexPlanner(std::move(bound_statement));
         default: throw std::invalid_argument("[Planner] Unknown statement type");
     }
 }
@@ -70,6 +71,10 @@ auto Planner::CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_ope
         }
         case LogicalOperatorType::INSERT : {
             physical_operator = PhysicalInsert(std::move(logical_operator));
+            break;
+        }
+        case LogicalOperatorType::CREATE_INDEX : {
+            physical_operator = PhysicalCreateIndex(std::move(logical_operator));
             break;
         }
         default: throw std::invalid_argument("[Planner] Create physical Unknown logical operator type");

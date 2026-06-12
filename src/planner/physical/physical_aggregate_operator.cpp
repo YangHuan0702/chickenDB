@@ -13,10 +13,8 @@ using namespace chickenDB;
 auto Planner::PhysicalAggregateOperator(std::unique_ptr<LogicalOperator> logical_operator) -> std::unique_ptr<PhysicalOperator> {
     ChickenException::AssertCondition(logical_operator->type_ == LogicalOperatorType::AGGREGATE,
                                       "[Planner] Physical Aggregate Operator handler error,target logical operator is not Aggregate type.");
-    // LogicalAggregate 目前不携带 group/agg 列信息（binder->logical 未填）。
-    // 真正从 SQL 建树留待 SQL 前端补全；此处构造一个空分组 + 0 号聚合列的占位算子，
-    // 保证 plan 化不返回 nullptr。算子本身的执行逻辑由单测直接构造来验证。
-    return std::make_unique<PhysicalHashAggregateOperator>(std::vector<col_id_t>{}, 0);
+    auto *logical_agg = dynamic_cast<LogicalAggregate *>(logical_operator.get());
+    return std::make_unique<PhysicalHashAggregateOperator>(logical_agg->group_cols_, logical_agg->agg_col_);
 }
 
 

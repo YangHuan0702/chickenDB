@@ -17,5 +17,6 @@ namespace chickenDB {
 
         table_id_t table_id_;
         col_id_t col_id_;
+        bool is_aggregate_{false}; // 该列引用是否来自聚合函数（如 SUM(col)）
     };
 }

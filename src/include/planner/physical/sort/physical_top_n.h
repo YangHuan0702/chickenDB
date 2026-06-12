@@ -8,7 +8,7 @@
 #include "common/types.h"
 
 namespace chickenDB {
-    // TopN：排序后只保留前 n_ 行。v1 用"全排序 + 截断"实现（堆优化留 TODO）。
+    // TopN：排序后只保留前 n_ 行。用 std::partial_sort（O(N log n)）取前 n。
     class PhysicalTopN : public PhysicalOperator {
     public:
         explicit PhysicalTopN(std::vector<col_id_t> sort_cols, size_t n)

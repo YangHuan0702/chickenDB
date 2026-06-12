@@ -7,6 +7,7 @@ add_subdirectory(planner)
 add_subdirectory(buffer)
 add_subdirectory(executor)
 add_subdirectory(index)
+add_subdirectory(transaction)
 
 add_library(chickenDB STATIC ${ALL_OBJECT_FILES})
 
@@ -20,6 +21,7 @@ set(CHICKEN_LIB
         CHICKEN_BUFFER
         CHICKEN_EXECUTOR
         CHICKEN_INDEX
+        CHICKEN_TRANSACTION
 )
 
 find_package(Threads REQUIRED)

@@ -2,6 +2,7 @@
 // Created by huan.yang on 2026-05-07.
 //
 #pragma once
+#include <functional>
 #include <memory>
 #include <shared_mutex>
 #include <string>
@@ -12,6 +13,7 @@
 #include "catalog/table_catalog_entry.h"
 #include "catalog/index_catalog_entry.h"
 #include "common/constants.h"
+#include "common/rid.h"
 #include "common/types.h"
 #include "parser/statment/create_table_statement.h"
 
@@ -47,6 +49,13 @@ public:
     // 按名取索引。
     auto GetIndex(const std::string &index_name) const -> const IndexInfo *;
 
+    // DML 索引维护：对某表的全部活索引，按行的键列值插入/删除 (key, rid)。
+    // key_value_of_col(col_id) 返回该行在某列上的值（double）。供执行器在写数据页后调用。
+    auto MaintainIndexInsert(table_id_t table_id,
+                             const std::function<double(col_id_t)> &col_value, const RID &rid) -> void;
+    auto MaintainIndexDelete(table_id_t table_id,
+                             const std::function<double(col_id_t)> &col_value, const RID &rid) -> void;
+
     auto LoadFromDisk() -> void;
     auto InitFreshDisk() -> void;
 
@@ -74,12 +83,21 @@ private:
     auto PersistUpdatedEntry(table_id_t table_id) -> void;
     auto PersistRootMeta() -> void;
 
+    // 索引定义持久化：把 index_map_ 的全部定义写入索引 catalog 页（单页，定长记录）。
+    auto PersistIndexDefs() -> void;
+    // 从索引 catalog 页读回定义，重建索引实例并扫表填充。
+    auto LoadIndexes() -> void;
+    // 扫表填充一个（空的）索引实例。
+    auto RebuildIndex(IndexInfo &info) -> void;
+
     table_id_t next_table_id_{1};
     page_id_t next_free_page_no_{1};
     uint32_t next_index_id_{1};
+    col_id_t next_col_id_{1}; // 全局单调 col_id 分配器（跨表唯一）
 
     std::shared_ptr<BufferManager> buffer_manager_{nullptr};
     page_id_t current_catalog_page_no_{CATALOG_FIRST_TABLE_PAGE_NO};
+    page_id_t index_catalog_page_no_{-1}; // 索引定义页（懒分配；存于 root meta）
     std::unordered_map<table_id_t, page_id_t> entry_page_map_;
 
     mutable std::shared_mutex rw_mutex_;

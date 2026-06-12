@@ -14,6 +14,8 @@ namespace chickenDB {
 
         CREATE = 5,
         DROP = 6,
+        CREATE_INDEX = 7,
+        TRANSACTION = 8,
     };
 
 

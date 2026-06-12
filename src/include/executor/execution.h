@@ -23,6 +23,9 @@ namespace chickenDB {
     private:
         auto ExecuteCreate(std::unique_ptr<PhysicalOperator> plan) -> void;
         auto ExecuteInsert(std::unique_ptr<PhysicalOperator> plan) -> void;
+        auto ExecuteCreateIndex(std::unique_ptr<PhysicalOperator> plan) -> void;
+        auto ExecuteDelete(std::unique_ptr<PhysicalOperator> plan) -> void;
+        auto ExecuteUpdate(std::unique_ptr<PhysicalOperator> plan) -> void;
         auto ExecuteQuery(std::unique_ptr<PhysicalOperator> plan) -> void;
 
         // 把执行期上下文递归下传到算子树的每个节点。

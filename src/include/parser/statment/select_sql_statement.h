@@ -24,5 +24,10 @@ namespace chickenDB {
 
         std::vector<std::unique_ptr<ParserExpression>> order_;
 
+        // 两表 inner equi-join：FROM table_ JOIN join_table_ ON join_condition_。
+        bool has_join_{false};
+        std::string join_table_;
+        std::unique_ptr<ParserExpression> join_condition_;
+
     };
 }

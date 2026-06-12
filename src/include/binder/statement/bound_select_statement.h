@@ -29,5 +29,10 @@ namespace chickenDB {
         std::unique_ptr<BoundExpression> having_;
 
         std::vector<std::unique_ptr<BoundExpression> > order_;
+
+        // 两表 inner equi-join：join_table_id_ 为右表，join_condition_ 为 ON（已绑定）。
+        bool has_join_{false};
+        table_id_t join_table_id_{0};
+        std::unique_ptr<BoundExpression> join_condition_;
     };
 }
