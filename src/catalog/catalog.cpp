@@ -240,7 +240,7 @@ auto Catalog::PersistUpdatedEntry(table_id_t table_id) -> void {
 }
 
 auto Catalog::AddRowCount(table_id_t table_id, uint64_t delta) -> void {
-    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
     auto it = table_entry_map_.find(table_id);
     if (it == table_entry_map_.end()) return;
     it->second.row_count += delta;
@@ -250,7 +250,7 @@ auto Catalog::AddRowCount(table_id_t table_id, uint64_t delta) -> void {
 auto Catalog::CreateIndex(const std::string &index_name, table_id_t table_id,
                           const std::vector<col_id_t> &key_cols, IndexType type,
                           bool unique) -> uint32_t {
-    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
     ChickenException::AssertCondition(!index_name.empty(), "index name can not be empty");
     ChickenException::AssertCondition(index_name_map_.find(index_name) == index_name_map_.end(),
                                       "index already exists: " + index_name);
@@ -285,7 +285,7 @@ auto Catalog::CreateIndex(const std::string &index_name, table_id_t table_id,
 }
 
 auto Catalog::GetTableIndexes(table_id_t table_id) const -> std::vector<const IndexInfo *> {
-    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     std::vector<const IndexInfo *> out;
     auto it = table_index_map_.find(table_id);
     if (it == table_index_map_.end()) return out;
@@ -297,7 +297,7 @@ auto Catalog::GetTableIndexes(table_id_t table_id) const -> std::vector<const In
 }
 
 auto Catalog::GetIndex(const std::string &index_name) const -> const IndexInfo * {
-    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = index_name_map_.find(index_name);
     if (it == index_name_map_.end()) return nullptr;
     auto iit = index_map_.find(it->second);
@@ -307,7 +307,7 @@ auto Catalog::GetIndex(const std::string &index_name) const -> const IndexInfo *
 auto Catalog::MaintainIndexInsert(table_id_t table_id,
                                   const std::function<double(col_id_t)> &col_value,
                                   const RID &rid) -> void {
-    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto tit = table_index_map_.find(table_id);
     if (tit == table_index_map_.end()) return;
     for (uint32_t id : tit->second) {
@@ -322,7 +322,7 @@ auto Catalog::MaintainIndexInsert(table_id_t table_id,
 auto Catalog::MaintainIndexDelete(table_id_t table_id,
                                   const std::function<double(col_id_t)> &col_value,
                                   const RID &rid) -> void {
-    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto tit = table_index_map_.find(table_id);
     if (tit == table_index_map_.end()) return;
     for (uint32_t id : tit->second) {
@@ -354,7 +354,7 @@ auto Catalog::PersistRootMeta() -> void {
 
 
 auto Catalog::CreateTable(const std::string& table_name,const std::vector<ColumnDefine>& colums_, uint64_t create_ts) -> TableCatalogEntry {
-    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
 
     ChickenException::AssertCondition(!table_name.empty(), "table name can not be empty");
     ChickenException::AssertCondition(GetTableLocked(table_name) == nullptr,
@@ -388,7 +388,7 @@ auto Catalog::CreateTable(const std::string& table_name,const std::vector<Column
 }
 
 auto Catalog::DropTable(const std::string &table_name, uint64_t drop_ts) -> bool {
-    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
 
     const auto table_iter = table_name_map_.find(table_name); // 直接查 map，无需再调 GetTableLocked
     if (table_iter == table_name_map_.end()) return false;
@@ -424,17 +424,17 @@ auto Catalog::GetTableLocked(table_id_t table_id) const -> const TableCatalogEnt
 
 
 auto Catalog::GetTable(const std::string &table_name) const -> const TableCatalogEntry * {
-    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return GetTableLocked(table_name);
 }
 
 auto Catalog::GetTable(table_id_t table_id) const -> const TableCatalogEntry * {
-    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return GetTableLocked(table_id);
 }
 
 auto Catalog::GetSchema(table_id_t table_id) const -> const SchemaPage * {
-    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     if (GetTableLocked(table_id) == nullptr) return nullptr;
     const auto it = schema_map_.find(table_id);
@@ -443,17 +443,17 @@ auto Catalog::GetSchema(table_id_t table_id) const -> const SchemaPage * {
 }
 
 auto Catalog::TableExists(const std::string &table_name) const -> bool {
-    std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return GetTableLocked(table_name) != nullptr;
 }
 
 
 auto Catalog::AllocateTableId() -> table_id_t {
-    return next_table_id_++;
+    return next_table_id_.fetch_add(1);
 }
 
 auto Catalog::AllocateSchemaPageNo() -> page_id_t {
-    return next_free_page_no_++;
+    return next_free_page_no_.fetch_add(1);
 }
 
 auto Catalog::BuildInitialSchema(const std::string& table_name,const std::vector<ColumnDefine>& colums_, uint64_t create_ts)
@@ -511,7 +511,7 @@ auto Catalog::PersistIndexDefs() -> void {
     buffer_manager_->UnpinPage(CATALOG_TABLE_ID, index_catalog_page_no_, true);
 }
 
-auto Catalog::LoadIndexes() -> void {
+auto Catalog:: LoadIndexes() -> void {
     if (buffer_manager_ == nullptr || index_catalog_page_no_ < 0) return;
 
     Page *page = buffer_manager_->FetchPage(CATALOG_TABLE_ID, index_catalog_page_no_);

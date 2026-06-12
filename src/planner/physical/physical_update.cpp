@@ -22,7 +22,7 @@ auto Planner::PhysicalUpdate(std::unique_ptr<LogicalOperator> logical_operator) 
             predicate = std::move(filter->condition_);
         }
     }
-    return std::make_unique<PhysicalUpdate>(logical_update->table_->table_id,
+    return std::make_unique<class PhysicalUpdate>(logical_update->table_->table_id,
                                             std::move(logical_update->col_ids_),
                                             std::move(logical_update->values_),
                                             std::move(predicate));

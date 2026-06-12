@@ -26,6 +26,6 @@ namespace chickenDB {
     private:
         table_id_t table_id_;
         std::shared_ptr<BufferManager> buffer_manager_;
-        const SchemaPage *schema_;
+        [[maybe_unused]] const SchemaPage *schema_;
     };
 }

@@ -90,17 +90,17 @@ private:
     // 扫表填充一个（空的）索引实例。
     auto RebuildIndex(IndexInfo &info) -> void;
 
-    table_id_t next_table_id_{1};
-    page_id_t next_free_page_no_{1};
-    uint32_t next_index_id_{1};
-    col_id_t next_col_id_{1}; // 全局单调 col_id 分配器（跨表唯一）
+    std::atomic<table_id_t> next_table_id_{1};
+    std::atomic<page_id_t> next_free_page_no_{1};
+    std::atomic<uint32_t> next_index_id_{1};
+    std::atomic<col_id_t> next_col_id_{1}; // 全局单调 col_id 分配器（跨表唯一）
 
     std::shared_ptr<BufferManager> buffer_manager_{nullptr};
     page_id_t current_catalog_page_no_{CATALOG_FIRST_TABLE_PAGE_NO};
     page_id_t index_catalog_page_no_{-1}; // 索引定义页（懒分配；存于 root meta）
     std::unordered_map<table_id_t, page_id_t> entry_page_map_;
 
-    mutable std::shared_mutex rw_mutex_;
+    mutable std::mutex mutex_;
 };
 
 }
