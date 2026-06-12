@@ -105,3 +105,46 @@ TEST(IndexMaintenance, InsertAfterCreateIndexIsFound) {
     std::error_code ec;
     std::filesystem::remove_all(dir, ec);
 }
+
+TEST(OrderBy, SortsDescending) {
+    const std::string dir = "./data/orderby_desc_test";
+    Db db = MakeDb(dir);
+    Session s(db.buffer, db.catalog, db.txn_mgr, db.vstore, db.log);
+    s.Execute("create table t (a INT, b INT)");
+    s.Execute("insert into t (a, b) values (1, 10)");
+    s.Execute("insert into t (a, b) values (3, 30)");
+    s.Execute("insert into t (a, b) values (2, 20)");
+
+    s.Execute("begin");
+    s.Execute("select a, b from t order by a desc");
+    ASSERT_EQ(s.LastResult().size(), 3U);
+    EXPECT_EQ(std::get<int>(s.LastResult()[0][0].value_), 3);
+    EXPECT_EQ(std::get<int>(s.LastResult()[1][0].value_), 2);
+    EXPECT_EQ(std::get<int>(s.LastResult()[2][0].value_), 1);
+    s.Execute("commit");
+
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
+}
+
+TEST(GroupBy, MaxByGroup) {
+    const std::string dir = "./data/groupby_max_test";
+    Db db = MakeDb(dir);
+    Session s(db.buffer, db.catalog, db.txn_mgr, db.vstore, db.log);
+    s.Execute("create table t (g INT, v INT)");
+    s.Execute("insert into t (g, v) values (1, 10)");
+    s.Execute("insert into t (g, v) values (1, 30)");
+    s.Execute("insert into t (g, v) values (1, 20)");
+
+    s.Execute("begin");
+    s.Execute("select g, max(v) from t group by g");
+    // 一组，[g=1, max=30]。
+    ASSERT_EQ(s.LastResult().size(), 1U);
+    ASSERT_EQ(s.LastResult()[0].size(), 2U);
+    EXPECT_EQ(std::get<double>(s.LastResult()[0][1].value_), 30.0);
+    s.Execute("commit");
+
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
+}
+

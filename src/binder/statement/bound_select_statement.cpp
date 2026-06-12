@@ -59,6 +59,7 @@ auto Binder::BinderSelectStatement(std::unique_ptr<SQLStatement> statement) -> s
         for (auto &parser_expression: parser_select_statement->order_) {
             bound_select_statement->order_.push_back(BoundExpression(std::move(parser_expression)));
         }
+        bound_select_statement->order_desc_ = parser_select_statement->order_desc_;
     }
     return bound_select_statement;
 }

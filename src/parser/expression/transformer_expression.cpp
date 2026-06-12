@@ -5,6 +5,8 @@
 #include "parser/transformer.h"
 #include "parser/expression/column_expression.h"
 
+#include <cctype>
+
 using namespace chickenDB;
 
 auto Transformer::TransformerOperatorExpression(hsql::Expr *expr) -> std::unique_ptr<ParserExpression> {
@@ -40,8 +42,7 @@ auto Transformer::TransformerExpression(hsql::Expr *expr) -> std::unique_ptr<Par
         case hsql::kExprColumnRef:
             return TransformerColumnRef(expr);
         case hsql::kExprFunctionRef: {
-            // 聚合函数 SUM(col)/COUNT(col)：取第一个参数列，标记为聚合列引用。
-            // COUNT(*) 等无列参数时退化为标记聚合的空列引用（聚合列由 planner 兜底）。
+            // 聚合函数 SUM(col)/COUNT(col)/MIN/MAX/AVG：取第一个参数列 + 函数名。
             std::string col_name;
             if (expr->exprList != nullptr && !expr->exprList->empty()) {
                 hsql::Expr *arg = expr->exprList->at(0);
@@ -49,6 +50,11 @@ auto Transformer::TransformerExpression(hsql::Expr *expr) -> std::unique_ptr<Par
             }
             auto col = std::make_unique<ColumnRefExpression>("", col_name);
             col->is_aggregate_ = true;
+            if (expr->name != nullptr) {
+                std::string fn = expr->name;
+                for (auto &ch : fn) ch = static_cast<char>(::toupper(ch));
+                col->agg_func_ = fn;
+            }
             return col;
         }
         case hsql::kExprLiteralFloat:

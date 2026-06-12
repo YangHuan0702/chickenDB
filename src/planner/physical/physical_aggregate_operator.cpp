@@ -14,7 +14,8 @@ auto Planner::PhysicalAggregateOperator(std::unique_ptr<LogicalOperator> logical
     ChickenException::AssertCondition(logical_operator->type_ == LogicalOperatorType::AGGREGATE,
                                       "[Planner] Physical Aggregate Operator handler error,target logical operator is not Aggregate type.");
     auto *logical_agg = dynamic_cast<LogicalAggregate *>(logical_operator.get());
-    return std::make_unique<PhysicalHashAggregateOperator>(logical_agg->group_cols_, logical_agg->agg_col_);
+    return std::make_unique<PhysicalHashAggregateOperator>(logical_agg->group_cols_, logical_agg->agg_col_,
+                                                           logical_agg->agg_func_);
 }
 
 
@@ -71,17 +72,17 @@ auto PhysicalHashAggregateOperator::Next() -> Chunk * {
             }
         }
 
-        // 物化所有组到一个输出 chunk：group 列(DOUBLE)... + sum(DOUBLE) + count(NUMBER)。
+        // 物化所有组到一个输出 chunk：group 列(DOUBLE)... + 聚合结果列。
+        // 聚合结果列类型：COUNT 为 NUMBER（整数计数），其余为 DOUBLE。
         const size_t num_groups = hash_table_.empty() ? 1 : hash_table_.size();
+        const bool agg_is_count = (agg_func_ == AggFuncType::COUNT);
         std::vector<ColumnType> out_types;
         for (size_t i = 0; i < col_ids_.size(); i++) out_types.push_back(ColumnType::DOUBLE);
-        out_types.push_back(ColumnType::DOUBLE); // sum
-        out_types.push_back(ColumnType::NUMBER); // count
+        out_types.push_back(agg_is_count ? ColumnType::NUMBER : ColumnType::DOUBLE);
         output_.Init(out_types, num_groups);
 
         std::vector<col_id_t> out_ids = col_ids_;
-        out_ids.push_back(agg_col_);          // sum 复用聚合列 id
-        out_ids.push_back(-1);                // count 用合成 id -1
+        out_ids.push_back(agg_col_); // 聚合结果列复用聚合列 id
         output_.SetColIds(out_ids);
 
         size_t row = 0;
@@ -89,9 +90,12 @@ auto PhysicalHashAggregateOperator::Next() -> Chunk * {
             for (size_t g = 0; g < col_ids_.size(); g++) {
                 output_.GetColumn(g).SetValue<double>(row, kv.second.group_vals[g]);
             }
-            output_.GetColumn(col_ids_.size()).SetValue<double>(row, kv.second.state.sum);
-            output_.GetColumn(col_ids_.size() + 1)
-                .SetValue<int32_t>(row, static_cast<int32_t>(kv.second.state.count));
+            const double res = kv.second.state.Result(agg_func_);
+            if (agg_is_count) {
+                output_.GetColumn(col_ids_.size()).SetValue<int32_t>(row, static_cast<int32_t>(res));
+            } else {
+                output_.GetColumn(col_ids_.size()).SetValue<double>(row, res);
+            }
             row++;
         }
         output_.SetCount(row);

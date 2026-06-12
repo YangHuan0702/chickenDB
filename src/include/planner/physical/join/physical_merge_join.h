@@ -9,7 +9,7 @@
 
 namespace chickenDB {
     // 归并等值连接：前提两侧都按 join key 有序。Init 物化两侧并各自按 key 排序，
-    // Next 用双指针归并匹配。v1 一次性产出全部匹配行。
+    // Next 用双指针归并匹配，一次性产出全部匹配行。
     class PhysicalMergeJoin : public PhysicalOperator {
     public:
         explicit PhysicalMergeJoin(std::vector<col_id_t> left_keys, std::vector<col_id_t> right_keys)

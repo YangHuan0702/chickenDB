@@ -23,6 +23,7 @@ namespace chickenDB {
         std::unique_ptr<ParserExpression> having_;
 
         std::vector<std::unique_ptr<ParserExpression>> order_;
+        std::vector<bool> order_desc_; // 与 order_ 并列：true=降序
 
         // 两表 inner equi-join：FROM table_ JOIN join_table_ ON join_condition_。
         bool has_join_{false};

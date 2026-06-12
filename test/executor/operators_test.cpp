@@ -150,12 +150,12 @@ TEST(Operators, HashAggregateGroupSum) {
     agg.children_.push_back(std::move(src));
 
     auto rows = Drain(&agg);
-    // 输出列：group(1) + sum + count = 3 列；两组。
+    // 输出列：group(1) + 聚合结果(SUM) = 2 列；两组。
     ASSERT_EQ(rows.size(), 2U);
     for (auto &row : rows) {
-        ASSERT_EQ(row.size(), 3U);
-        if (row[0] == 1) { EXPECT_EQ(row[1], 30); EXPECT_EQ(row[2], 2); }
-        else if (row[0] == 2) { EXPECT_EQ(row[1], 5); EXPECT_EQ(row[2], 1); }
+        ASSERT_EQ(row.size(), 2U);
+        if (row[0] == 1) { EXPECT_EQ(row[1], 30); }
+        else if (row[0] == 2) { EXPECT_EQ(row[1], 5); }
         else { FAIL() << "unexpected group key " << row[0]; }
     }
 }

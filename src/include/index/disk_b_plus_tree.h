@@ -74,6 +74,8 @@ namespace chickenDB {
         auto SplitInternal(page_id_t node) -> void;
         // 返回 node 在 parent 中的位置 + parent page（-1 表示 node 是 root）。
         auto FindParent(page_id_t root, page_id_t target, const IndexKey &hint) const -> page_id_t;
+        // 叶子删除后下溢（num_keys < cap/2）时向同父兄弟借位或与之合并，并更新父分隔键。
+        auto RebalanceLeaf(page_id_t leaf, const IndexKey &hint) -> void;
 
         std::shared_ptr<BufferManager> buffer_;
         table_id_t table_id_;

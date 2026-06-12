@@ -27,7 +27,7 @@ namespace chickenDB {
     ├─────────────────────────────────────┤
     │         Null Bitmap Section         │  ← 每列一个 bitmap，列序排列
     ├─────────────────────────────────────┤
-    │          Page Checksum (8B)         │  ← 末尾校验（v1 写 0）
+    │          Page Checksum (8B)         │  ← 末尾校验（FNV-1a，header.checksum）
     └─────────────────────────────────────┘  ← offset PAGE_SIZE
      */
     struct ColDirEntry {
@@ -51,7 +51,7 @@ namespace chickenDB {
         uint64_t min_row_id; // 行 ID 范围（用于过滤）
         uint64_t max_row_id;
         uint64_t create_ts; // 写入时间戳
-        uint8_t reserved[4];
+        uint32_t checksum; // 页内容校验和（FNV-1a，覆盖 header 之后的区段；0=未校验）
     };
 
     // 一列待写入的原始（未压缩）定长数据 + 可选 null bitmap。
@@ -94,6 +94,9 @@ namespace chickenDB {
         auto Compression() const -> CompressionType {
             return static_cast<CompressionType>(header_.compression);
         }
+
+        // 校验页内容与存储 checksum 是否一致（0=未启用，返回 true）。
+        auto VerifyChecksum() const -> bool;
 
         // 是否为合法数据页（魔数 + 页类型校验），扫描时用于跳过空页/非数据页。
         auto IsDataPage() const -> bool {

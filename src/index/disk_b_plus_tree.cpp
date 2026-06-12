@@ -320,7 +320,7 @@ auto DiskBPlusTreeIndex::InsertIntoParent(page_id_t left, const IndexKey &key, p
     if (left == root_page_id_) {
         // 稳定根：把当前根（left，已是分裂后的左半）整页内容搬到新页 new_left，
         // 再把根页本身改写成内部节点 [new_left, right]，根页号保持不变（便于持久化）。
-        page_id_t new_left = AllocNode(true); // is_leaf 占位，下面整页覆盖
+        page_id_t new_left = AllocNode(true); // is_leaf 标记随后被整页覆盖
         Page *lp = buffer_->FetchPage(table_id_, left);
         Page *nlp = buffer_->FetchPage(table_id_, new_left);
         std::memcpy(nlp->data, lp->data, PAGE_SIZE);
@@ -397,9 +397,9 @@ auto DiskBPlusTreeIndex::SplitInternal(page_id_t node) -> void {
 }
 
 auto DiskBPlusTreeIndex::Erase(const IndexKey &key, const RID &rid) -> bool {
-    // 简化：仅在叶子内删除该 (key,rid)，不做下溢合并（不影响正确性，仅空间）。
     page_id_t leaf = FindLeafPage(key);
     bool erased = false;
+    page_id_t erased_leaf = -1;
     while (leaf >= 0) {
         Page *page = buffer_->FetchPage(table_id_, leaf);
         NodeView v{};
@@ -418,6 +418,7 @@ auto DiskBPlusTreeIndex::Erase(const IndexKey &key, const RID &rid) -> bool {
                 v.num_keys--;
                 WriteHeader(page->data, v);
                 erased = true;
+                erased_leaf = leaf;
                 break;
             }
         }
@@ -426,5 +427,83 @@ auto DiskBPlusTreeIndex::Erase(const IndexKey &key, const RID &rid) -> bool {
         if (erased || past) break;
         leaf = next;
     }
+    // 删除成功后处理下溢（借位/与右兄弟合并）。根叶子不处理（允许为空）。
+    if (erased && erased_leaf != root_page_id_) {
+        RebalanceLeaf(erased_leaf, key);
+    }
     return erased;
+}
+
+// 叶子下溢处理：仅在 num_keys < cap/2 时触发。优先向右兄弟借一个键；右兄弟也不富裕
+// 则与右兄弟合并（把右兄弟内容并入本叶，删除父中对应分隔键）。只处理同父右兄弟这一
+// 常见情形——同父右兄弟。其它邻居或内部节点下溢不在此处理，正确性不受影响（仅空间）。
+auto DiskBPlusTreeIndex::RebalanceLeaf(page_id_t leaf, const IndexKey &hint) -> void {
+    const uint16_t min_keys = LeafCapacity() / 2;
+    Page *lp = buffer_->FetchPage(table_id_, leaf);
+    NodeView lv{};
+    ReadHeader(lp->data, lv, leaf);
+    if (lv.num_keys >= min_keys || lv.next_leaf < 0) {
+        buffer_->UnpinPage(table_id_, leaf, false);
+        return;
+    }
+    const page_id_t right = lv.next_leaf;
+
+    // 找父节点，且要求 leaf 与 right 同父（right 是 leaf 在父中的下一个孩子）。
+    page_id_t parent = FindParent(root_page_id_, leaf, hint);
+    if (parent < 0) { buffer_->UnpinPage(table_id_, leaf, false); return; }
+    Page *pp = buffer_->FetchPage(table_id_, parent);
+    NodeView pv{};
+    ReadHeader(pp->data, pv, parent);
+    uint16_t ci = 0;
+    while (ci <= pv.num_keys && ChildAt(pp->data, ci) != leaf) ci++;
+    const bool same_parent = (ci < pv.num_keys && ChildAt(pp->data, ci + 1) == right);
+    if (!same_parent) {
+        buffer_->UnpinPage(table_id_, parent, false);
+        buffer_->UnpinPage(table_id_, leaf, false);
+        return;
+    }
+
+    Page *rp = buffer_->FetchPage(table_id_, right);
+    NodeView rv{};
+    ReadHeader(rp->data, rv, right);
+
+    if (rv.num_keys > min_keys) {
+        // 借位：把 right 的首键搬到 leaf 末尾，更新父分隔键为 right 的新首键。
+        SetKeyAt(lp->data, lv.num_keys, KeyAt(rp->data, 0));
+        SetLeafRidAt(lp->data, lv.num_keys, LeafRidAt(rp->data, 0));
+        lv.num_keys++;
+        for (uint16_t t = 0; t + 1 < rv.num_keys; t++) {
+            SetKeyAt(rp->data, t, KeyAt(rp->data, t + 1));
+            SetLeafRidAt(rp->data, t, LeafRidAt(rp->data, t + 1));
+        }
+        rv.num_keys--;
+        SetKeyAt(pp->data, ci, KeyAt(rp->data, 0));
+        WriteHeader(lp->data, lv);
+        WriteHeader(rp->data, rv);
+        buffer_->UnpinPage(table_id_, right, true);
+        buffer_->UnpinPage(table_id_, parent, true);
+        buffer_->UnpinPage(table_id_, leaf, true);
+        return;
+    }
+
+    // 合并：right 全部并入 leaf，leaf.next 指向 right.next，父删除分隔键 ci + 孩子 ci+1。
+    for (uint16_t t = 0; t < rv.num_keys; t++) {
+        SetKeyAt(lp->data, lv.num_keys, KeyAt(rp->data, t));
+        SetLeafRidAt(lp->data, lv.num_keys, LeafRidAt(rp->data, t));
+        lv.num_keys++;
+    }
+    lv.next_leaf = rv.next_leaf;
+    WriteHeader(lp->data, lv);
+    // 父：删除 key[ci] 与 child[ci+1]。
+    for (uint16_t t = ci; t + 1 < pv.num_keys; t++) {
+        SetKeyAt(pp->data, t, KeyAt(pp->data, t + 1));
+    }
+    for (uint16_t t = ci + 1; t < pv.num_keys; t++) {
+        SetChildAt(pp->data, t, ChildAt(pp->data, t + 1));
+    }
+    pv.num_keys--;
+    WriteHeader(pp->data, pv);
+    buffer_->UnpinPage(table_id_, right, true);
+    buffer_->UnpinPage(table_id_, parent, true);
+    buffer_->UnpinPage(table_id_, leaf, true);
 }

@@ -29,6 +29,7 @@ namespace chickenDB {
         std::unique_ptr<BoundExpression> having_;
 
         std::vector<std::unique_ptr<BoundExpression> > order_;
+        std::vector<bool> order_desc_; // 与 order_ 并列：true=降序
 
         // 两表 inner equi-join：join_table_id_ 为右表，join_condition_ 为 ON（已绑定）。
         bool has_join_{false};

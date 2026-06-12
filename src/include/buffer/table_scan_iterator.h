@@ -26,7 +26,7 @@ namespace chickenDB {
         auto GetSchemaPage() -> const SchemaPage * {return schema_page_;}
 
         // 最近一次 Next() 返回的 chunk 所属的数据页号。配合 chunk 内行下标可构造每行
-        // 的 RID = {CurrentPageNo(), row_idx}（v1 一页对应一个 chunk）。
+        // 的 RID = {CurrentPageNo(), row_idx}（一页对应一个 chunk）。
         auto CurrentPageNo() const -> page_id_t { return current_page_no_; }
 
 

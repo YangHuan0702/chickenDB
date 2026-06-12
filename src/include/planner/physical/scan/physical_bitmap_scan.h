@@ -16,7 +16,7 @@
 
 namespace chickenDB {
     // 位图扫描：用 bitmap 索引按键定位命中行的 RID 集合（点查或范围查），再按 RID
-    // 批量回表读取。未绑定可用索引时退化为全表扫描 + 谓词过滤（语义正确）。
+    // 批量回表读取。未绑定可用索引时走全表扫描 + 谓词过滤。
     class PhysicalBitmapScan : public PhysicalOperator {
     public:
         explicit PhysicalBitmapScan(table_id_t table_id, std::shared_ptr<Catalog> catalog,

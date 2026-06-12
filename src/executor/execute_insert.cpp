@@ -68,7 +68,6 @@ auto Execution::ExecuteInsert(std::unique_ptr<PhysicalOperator> plan) -> void {
     const size_t bitmap_bytes = (num_rows + 7) / 8;
     std::vector<std::vector<char>> col_buffers;
     std::vector<std::vector<uint8_t>> col_validity;
-    std::vector<ColumnInput> inputs;
     col_buffers.reserve(schema_cols.size());
     col_validity.reserve(schema_cols.size());
 
@@ -106,64 +105,78 @@ auto Execution::ExecuteInsert(std::unique_ptr<PhysicalOperator> plan) -> void {
 
         col_buffers.push_back(std::move(buf));
         col_validity.push_back(std::move(validity));
-        inputs.push_back(ColumnInput{col.col_id, col.data_type, nullptr,
-                                     static_cast<uint32_t>(col_buffers.back().size()), nullptr});
-    }
-    // buffers 已 move 定位，回填指针（避免悬垂）。
-    for (size_t i = 0; i < inputs.size(); i++) {
-        inputs[i].data = col_buffers[i].data();
-        inputs[i].validity = col_validity[i].data();
     }
 
-    // 分配新数据页并写入。v1：一条 INSERT 的所有行写入单页，放不下报错。
-    Page *page = context_->buffer_manager_->NewPage(table_id);
-    const page_id_t page_no = page->page_id_.page_no;
-    const uint64_t base_row_id = insert->table_->row_count;
+    // 多页分裂：从 row_start 起尽量多地塞进一页，放不下就减半重试，逐页写入。
+    const size_t ncols = schema_cols.size();
+    const txn_id_t tid = context_->HasTxn() ? context_->txn_->GetTxnId() : INVALID_TXN_ID;
+    uint32_t row_start = 0;
+    while (row_start < num_rows) {
+        uint32_t cnt = num_rows - row_start; // 本页尝试写入的行数
+        Page *page = context_->buffer_manager_->NewPage(table_id);
+        const page_id_t page_no = page->page_id_.page_no;
 
-    TableDataPage data_page(table_id, page);
-    bool ok = data_page.BuildFromColumns(inputs, num_rows, CompressionType::ZSTD,
-                                         base_row_id, insert->table_->create_ts);
-    context_->buffer_manager_->UnpinPage(table_id, page_no, /*is_dirty=*/true);
-    ChickenException::AssertCondition(ok, "[ExecuteInsert] rows do not fit in a single page (v1 limit)");
-
-    // 事务路径：为每个新行登记版本 + 写 WAL（write-ahead：先日志后可见）。
-    if (context_->HasTxn()) {
-        const txn_id_t tid = context_->txn_->GetTxnId();
-        for (uint32_t r = 0; r < num_rows; r++) {
-            RID rid(page_no, r);
-            if (context_->log_manager_ != nullptr) {
-                LogRecord rec;
-                rec.type = LogRecordType::INSERT;
-                rec.txn_id = tid;
-                rec.table_id = table_id;
-                rec.rid_page = page_no;
-                rec.rid_row = r;
-                context_->log_manager_->Append(rec);
+        // 为本页切片构造 ColumnInput（指向各列在 [row_start, row_start+cnt) 的子段）。
+        // 注意 null bitmap 是按行 bit，切片需重算；这里 INSERT 全有效，给 nullptr 即全有效。
+        auto build_slice = [&](uint32_t slice_cnt) -> bool {
+            std::vector<ColumnInput> slice;
+            slice.reserve(ncols);
+            for (size_t c = 0; c < ncols; c++) {
+                const size_t ts = TypeSizeConversion::TypeSize(schema_cols[c].data_type);
+                slice.push_back(ColumnInput{
+                    schema_cols[c].col_id, schema_cols[c].data_type,
+                    col_buffers[c].data() + static_cast<size_t>(row_start) * ts,
+                    static_cast<uint32_t>(slice_cnt * ts), nullptr});
             }
-            context_->version_store_->OnInsert(rid, tid);
-            context_->txn_->AppendInsert(rid);
-        }
-        if (context_->log_manager_ != nullptr) {
-            context_->log_manager_->Flush();
-        }
-    }
-
-    // 索引维护：对每个新行，按各索引键列值插入 (key, rid) 到该表的活索引。
-    for (uint32_t r = 0; r < num_rows; r++) {
-        RID rid(page_no, r);
-        auto col_value = [&](col_id_t cid) -> double {
-            for (size_t c = 0; c < schema_cols.size(); c++) {
-                if (schema_cols[c].col_id != cid) continue;
-                const char *slot = col_buffers[c].data() +
-                                   static_cast<size_t>(r) * TypeSizeConversion::TypeSize(schema_cols[c].data_type);
-                if (schema_cols[c].data_type == ColumnType::NUMBER) {
-                    int32_t iv; std::memcpy(&iv, slot, sizeof(int32_t)); return static_cast<double>(iv);
-                }
-                double dv; std::memcpy(&dv, slot, sizeof(double)); return dv;
-            }
-            return 0;
+            TableDataPage dp(table_id, page);
+            return dp.BuildFromColumns(slice, slice_cnt, CompressionType::ZSTD,
+                                       insert->table_->row_count + row_start,
+                                       insert->table_->create_ts);
         };
-        context_->catalog_->MaintainIndexInsert(table_id, col_value, rid);
+
+        while (cnt > 0 && !build_slice(cnt)) {
+            cnt /= 2; // 放不下：减半重试
+        }
+        ChickenException::AssertCondition(cnt > 0, "[ExecuteInsert] single row exceeds page size");
+        context_->buffer_manager_->UnpinPage(table_id, page_no, /*is_dirty=*/true);
+
+        // 本页 [row_start, row_start+cnt) 的事务版本/WAL + 索引维护。
+        for (uint32_t k = 0; k < cnt; k++) {
+            const uint32_t global_r = row_start + k;
+            RID rid(page_no, k);
+            if (context_->HasTxn()) {
+                if (context_->log_manager_ != nullptr) {
+                    LogRecord rec;
+                    rec.type = LogRecordType::INSERT;
+                    rec.txn_id = tid;
+                    rec.table_id = table_id;
+                    rec.rid_page = page_no;
+                    rec.rid_row = k;
+                    context_->log_manager_->Append(rec);
+                }
+                context_->version_store_->OnInsert(rid, tid);
+                context_->txn_->AppendInsert(rid);
+            }
+            auto col_value = [&](col_id_t cid) -> double {
+                for (size_t c = 0; c < ncols; c++) {
+                    if (schema_cols[c].col_id != cid) continue;
+                    const char *slot = col_buffers[c].data() +
+                                       static_cast<size_t>(global_r) * TypeSizeConversion::TypeSize(schema_cols[c].data_type);
+                    if (schema_cols[c].data_type == ColumnType::NUMBER) {
+                        int32_t iv; std::memcpy(&iv, slot, sizeof(int32_t)); return static_cast<double>(iv);
+                    }
+                    double dv; std::memcpy(&dv, slot, sizeof(double)); return dv;
+                }
+                return 0;
+            };
+            context_->catalog_->MaintainIndexInsert(table_id, col_value, rid);
+        }
+
+        row_start += cnt;
+    }
+
+    if (context_->HasTxn() && context_->log_manager_ != nullptr) {
+        context_->log_manager_->Flush();
     }
 
     context_->catalog_->AddRowCount(table_id, num_rows);

@@ -8,8 +8,8 @@
 #include "common/types.h"
 
 namespace chickenDB {
-    // 索引嵌套循环连接：本应对 probe 侧每行用 build 侧索引点查。无索引时 v1 退化为
-    // 嵌套循环语义（全表匹配）。语义与 NestedLoopJoin 一致，仅类型标记不同。
+    // 索引嵌套循环连接：build 侧建哈希索引，probe 侧每行用 join key 点查匹配（O(1) 探测）。
+    // 等值连接，输出左右列拼接。
     class PhysicalIndexNLJoin : public PhysicalOperator {
     public:
         explicit PhysicalIndexNLJoin(std::vector<col_id_t> left_keys, std::vector<col_id_t> right_keys)

@@ -89,7 +89,9 @@ auto TableDataPage::InitHeader() -> void {
     offset += sizeof(uint64_t);
 
     memcpy(&header_.create_ts, page_->data + offset, sizeof(uint64_t));
-    // offset += sizeof(uint64_t);
+    offset += sizeof(uint64_t);
+
+    memcpy(&header_.checksum, page_->data + offset, sizeof(uint32_t));
 }
 
 
@@ -132,10 +134,20 @@ auto TableDataPage::WriteHeader() -> void {
     offset += sizeof(uint64_t);
 
     memcpy(page_->data + offset, &header_.create_ts, sizeof(uint64_t));
+    offset += sizeof(uint64_t);
+
+    memcpy(page_->data + offset, &header_.checksum, sizeof(uint32_t));
 }
 
-
-auto TableDataPage::BuildFromColumns(const std::vector<ColumnInput> &cols, uint32_t num_rows,
+// FNV-1a 32 位校验，覆盖 [from, to) 区间字节。
+static auto Fnv1a(const char *data, size_t from, size_t to) -> uint32_t {
+    uint32_t h = 2166136261u;
+    for (size_t i = from; i < to; i++) {
+        h ^= static_cast<uint8_t>(data[i]);
+        h *= 16777619u;
+    }
+    return h;
+}
                                      CompressionType compression, uint64_t base_row_id,
                                      uint64_t create_ts) -> bool {
     const auto num_columns = static_cast<uint16_t>(cols.size());
@@ -158,7 +170,7 @@ auto TableDataPage::BuildFromColumns(const std::vector<ColumnInput> &cols, uint3
     const uint32_t null_bitmap_offset = cursor;
     const uint32_t total_size = null_bitmap_offset + static_cast<uint32_t>(bitmap_bytes * num_columns);
     if (total_size > PAGE_SIZE) {
-        return false; // v1: 单页放不下则失败，调用方负责分页（暂不支持）。
+        return false; // 单页放不下：返回 false，调用方按行数切分到多页。
     }
 
     // 填充 header。
@@ -175,7 +187,8 @@ auto TableDataPage::BuildFromColumns(const std::vector<ColumnInput> &cols, uint3
     header_.min_row_id = base_row_id;
     header_.max_row_id = num_rows == 0 ? base_row_id : base_row_id + num_rows - 1;
     header_.create_ts = create_ts;
-    std::memset(header_.reserved, 0, sizeof(header_.reserved));
+    header_.version = 2; // v2：页尾带 checksum
+    header_.checksum = 0;
     WriteHeader();
 
     // 写列目录。
@@ -210,8 +223,19 @@ auto TableDataPage::BuildFromColumns(const std::vector<ColumnInput> &cols, uint3
 
     // 同步内存态，使后续读 accessor 立即可用。
     cols_ = std::move(dir);
+    // 计算并写入校验和（覆盖 header 之后到 total_size 的全部内容）。
+    header_.checksum = Fnv1a(page_->data, K_HEADER_SIZE, total_size);
+    WriteHeader();
     inited = true;
     return true;
+}
+
+// 校验页内容是否与存储的 checksum 一致（checksum==0 视为未启用，返回 true）。
+auto TableDataPage::VerifyChecksum() const -> bool {
+    if (header_.checksum == 0) return true;
+    const uint32_t end = header_.null_bitmap_offset +
+                         static_cast<uint32_t>(((header_.num_rows + 7) / 8) * header_.num_columns);
+    return Fnv1a(page_->data, K_HEADER_SIZE, end) == header_.checksum;
 }
 
 

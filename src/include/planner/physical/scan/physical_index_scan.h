@@ -15,7 +15,7 @@
 
 namespace chickenDB {
     // 索引扫描：通过 catalog 中已注册的索引定位匹配行（点查或闭区间范围查），再按 RID
-    // 回表取行。当未绑定可用索引时，退化为全表扫描 + 谓词过滤（保证语义正确）。
+    // 回表取行。当未绑定可用索引时，走全表扫描 + 谓词过滤。
     //
     // planner 在谓词形如 col = v / col BETWEEN lo AND hi 且该列上有索引时，设置
     // index_name_ 与 lookup_lo_/lookup_hi_ 走索引路径；否则只给 predicate_ 走全扫。

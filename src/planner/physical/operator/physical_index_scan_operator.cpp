@@ -1,10 +1,9 @@
 //
 // Created by huan.yang on 2026-06-11.
 //
-// 三个基于索引的扫描算子的执行实现。项目当前无索引结构，统一退化为全表扫描语义：
-//   IndexScan / BitmapScan -> 全扫 + 谓词过滤
-//   IndexOnlyScan          -> 全扫 + 覆盖列投影
-// 结果正确，待索引基础设施就绪后各自改为真正走索引。
+// 三个基于索引的扫描算子的执行实现：
+//   IndexScan / BitmapScan -> 绑定索引时走点查/范围查 + 回表，否则全表扫描 + 谓词过滤
+//   IndexOnlyScan          -> 绑定覆盖索引时直接从索引键产出列（不回表），否则全扫 + 投影
 //
 #include "planner/physical/scan/physical_index_scan.h"
 #include "planner/physical/scan/physical_index_olny_scan.h"

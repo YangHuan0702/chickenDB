@@ -44,5 +44,6 @@ auto Binder::BoundColumnExpression(std::unique_ptr<ParserExpression> expr) -> st
 
     auto bound = std::make_unique<chickenDB::BoundColumnExpression>(table_catalog_entry->table_id, id);
     bound->is_aggregate_ = parser_column_expression->is_aggregate_;
+    bound->agg_func_ = parser_column_expression->agg_func_;
     return bound;
 }

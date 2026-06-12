@@ -70,7 +70,7 @@ auto TableScanIterator::FillChunkFromPage(Chunk &chunk) -> size_t {
 }
 
 // 顺序扫描：每次返回一页数据填入 output。无更多数据页返回 false。
-// v1 约定：一页 -> 一个 chunk（页行数 <= K_VECTOR_SIZE）。
+// 约定：一页 -> 一个 chunk（页行数 <= K_VECTOR_SIZE）。
 auto TableScanIterator::Next(Chunk &output) -> bool {
     if (!started_) {
         current_page_no_ = first_page_id_;

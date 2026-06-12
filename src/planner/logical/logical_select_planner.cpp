@@ -138,32 +138,48 @@ auto Planner::LogicalSelectPlanner(std::unique_ptr<BoundStatement> bound_stateme
                 group_cols.push_back(static_cast<BoundColumnExpression *>(g.get())->col_id_);
             }
         }
-        // 聚合列：select 列表里第一个聚合函数引用的列（v1 单聚合）。
+        // 聚合列 + 函数类型：select 列表里第一个聚合函数引用。
         col_id_t agg_col = group_cols.empty() ? 0 : group_cols[0];
+        AggFuncType agg_func = AggFuncType::SUM;
         for (auto &c : bound_select_statement->columns_) {
             if (c->type_ == BinderExpressionType::COLUMN) {
                 auto *col = static_cast<BoundColumnExpression *>(c.get());
-                if (col->is_aggregate_) { agg_col = col->col_id_; break; }
+                if (col->is_aggregate_) {
+                    agg_col = col->col_id_;
+                    const std::string &fn = col->agg_func_;
+                    if (fn == "COUNT") agg_func = AggFuncType::COUNT;
+                    else if (fn == "MIN") agg_func = AggFuncType::MIN;
+                    else if (fn == "MAX") agg_func = AggFuncType::MAX;
+                    else if (fn == "AVG") agg_func = AggFuncType::AVG;
+                    else agg_func = AggFuncType::SUM;
+                    break;
+                }
             }
         }
         auto agg = std::make_unique<LogicalAggregate>();
         agg->group_cols_ = group_cols;
         agg->agg_col_ = agg_col;
+        agg->agg_func_ = agg_func;
         agg->children_.push_back(std::move(root));
         root = std::move(agg);
-        return root; // 聚合输出列已是 group+sum+count，不再投影（v1）
+        return root; // 聚合输出列：group 列 + 聚合结果列
     }
 
     // ORDER BY：在投影之下排序（此时各列齐全），投影保序。
     if (!bound_select_statement->order_.empty()) {
         std::vector<col_id_t> sort_cols;
-        for (auto &o : bound_select_statement->order_) {
+        std::vector<bool> sort_desc;
+        for (size_t i = 0; i < bound_select_statement->order_.size(); i++) {
+            auto &o = bound_select_statement->order_[i];
             if (o->type_ == BinderExpressionType::COLUMN) {
                 sort_cols.push_back(static_cast<BoundColumnExpression *>(o.get())->col_id_);
+                sort_desc.push_back(i < bound_select_statement->order_desc_.size()
+                                        ? bound_select_statement->order_desc_[i] : false);
             }
         }
         auto sort = std::make_unique<LogicalSort>();
         sort->col_ids_ = sort_cols;
+        sort->desc_ = sort_desc;
         sort->children_.push_back(std::move(root));
         root = std::move(sort);
     }

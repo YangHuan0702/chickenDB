@@ -15,8 +15,10 @@ namespace chickenDB {
      */
     class PhysicalHashAggregateOperator : public PhysicalOperator {
     public:
-        explicit PhysicalHashAggregateOperator(std::vector<col_id_t> col_ids,col_id_t agg_col) :
-        PhysicalOperator(PhysicalOperatorType::HashAggregate),col_ids_(std::move(col_ids)),agg_col_(agg_col) {}
+        explicit PhysicalHashAggregateOperator(std::vector<col_id_t> col_ids, col_id_t agg_col,
+                                               AggFuncType agg_func = AggFuncType::SUM) :
+        PhysicalOperator(PhysicalOperatorType::HashAggregate),
+        col_ids_(std::move(col_ids)), agg_col_(agg_col), agg_func_(agg_func) {}
 
         ~PhysicalHashAggregateOperator() override = default;
 
@@ -29,6 +31,7 @@ namespace chickenDB {
 
         std::vector<col_id_t> col_ids_{}; // GROUP BY 列
         col_id_t agg_col_;                // 聚合列
+        AggFuncType agg_func_;            // 聚合函数类型
 
         // group key 序列化 -> 聚合状态 + 该组的 group-by 列值（double，用于输出）
         struct GroupEntry {

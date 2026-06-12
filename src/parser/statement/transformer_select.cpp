@@ -58,6 +58,7 @@ auto Transformer::TransformerSelectStatement(hsql::SQLStatement *statement) -> s
     if (select_statement->order != nullptr) {
         for (auto order_statement : *select_statement->order) {
             r->order_.push_back(TransformerExpression(order_statement->expr));
+            r->order_desc_.push_back(order_statement->type == hsql::kOrderDesc);
         }
     }
     return r;

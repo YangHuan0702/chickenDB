@@ -475,7 +475,7 @@ auto Catalog::BuildInitialSchema(const std::string& table_name,const std::vector
     return schema;
 }
 
-// 索引定义页布局：[uint32 count][IndexDefRecord ...]。单页（v1），足够数十个索引。
+// 索引定义页布局：[uint32 count][IndexDefRecord ...]。单页，足够数十个索引。
 auto Catalog::PersistIndexDefs() -> void {
     if (buffer_manager_ == nullptr) return;
 

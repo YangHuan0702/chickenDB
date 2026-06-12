@@ -54,7 +54,7 @@ auto PhysicalNestedLoopJoin::Close() -> void {
 
 auto PhysicalNestedLoopJoin::Next() -> Chunk * {
     if (right_built_) {
-        return nullptr; // v1：一次性产出全部结果
+        return nullptr; // 一次性产出全部结果
     }
     // 物化右表。
     JoinRows right = JoinUtil::Materialize(Child(1), right_keys_);

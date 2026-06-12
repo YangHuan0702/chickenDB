@@ -15,5 +15,6 @@ namespace chickenDB {
         ~LogicalSort() override = default;
 
         std::vector<col_id_t> col_ids_;
+        std::vector<bool> desc_; // 与 col_ids_ 并列：true=降序
     };
 }
