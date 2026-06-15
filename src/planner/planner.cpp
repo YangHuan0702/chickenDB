@@ -69,14 +69,6 @@ auto Planner::CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_ope
             physical_operator = PhysicalCreateTable(std::move(logical_operator));
             break;
         }
-        case LogicalOperatorType::DELETE : {
-            physical_operator = PhysicalDelete(std::move(logical_operator));
-            break;
-        }
-        case LogicalOperatorType::UPDATE : {
-            physical_operator = PhysicalUpdate(std::move(logical_operator));
-            break;
-        }
         case LogicalOperatorType::INSERT : {
             physical_operator = PhysicalInsert(std::move(logical_operator));
             break;
