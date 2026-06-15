@@ -20,6 +20,7 @@ static auto TransformConstantValue(Transformer &transformer, hsql::Expr *expr) -
 auto Transformer::TransformerInsertStatement(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement> {
     auto insert_statement = dynamic_cast<hsql::InsertStatement*>(statement);
 
+    current_table_name_ = insert_statement->tableName;
     auto res = std::make_unique<chickenDB::InsertStatement>(insert_statement->tableName);
 
     size_t insert_column_size = insert_statement->columns->size();

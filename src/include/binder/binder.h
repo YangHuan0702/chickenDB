@@ -27,7 +27,7 @@ namespace chickenDB {
 
         auto BoundExpression(std::unique_ptr<ParserExpression> expression) -> std::unique_ptr<BoundExpression>;
         auto BoundBinaryExpression(std::unique_ptr<ParserExpression>) -> std::unique_ptr<class BoundExpression>;
-        auto BoundColumnExpression(std::unique_ptr<ParserExpression>) -> std::unique_ptr<class BoundExpression>;
+        auto BoundColumnExpression(std::unique_ptr<ParserExpression> expr) -> std::unique_ptr<class BoundExpression>;
         auto BoundConstantExpression(std::unique_ptr<ParserExpression>) -> std::unique_ptr<class BoundExpression>;
         auto BoundUnaryExpression(std::unique_ptr<ParserExpression>) -> std::unique_ptr<class BoundExpression>;
 

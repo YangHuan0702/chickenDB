@@ -22,8 +22,9 @@ auto Binder::BoundColumnExpression(std::unique_ptr<ParserExpression> expr) -> st
     } else if (has_current_table_) {
         table_catalog_entry = catalog_->GetTable(current_table_id_);
     }
+
     ChickenException::AssertCondition(table_catalog_entry != nullptr,
-                                      "[Binder] bound column expression error, unknown table:" + parser_column_expression->table_name_);
+                                      "[Binder] bound column expression error, unknown table: " + parser_column_expression->table_name_);
 
     auto schema_page = catalog_->GetSchema(table_catalog_entry->table_id);
 

@@ -89,6 +89,7 @@ auto Session::Execute(const std::string &sql) -> void {
     parser.ParserQuery(sql);
 
     Planner planner;
+    planner.SetCatalog(catalog_);
     for (auto &stmt : parser.statements_) {
         // 事务控制语句：在绑定前直接作用于会话（不进入算子流水线）。
         if (stmt->type_ == StatementType::TRANSACTION) {

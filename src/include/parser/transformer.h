@@ -35,6 +35,8 @@ namespace chickenDB {
         auto TransformerColumnRef(hsql::Expr *) -> std::unique_ptr<ParserExpression>;
         auto TransformerConstant(hsql::Expr *) -> std::unique_ptr<ParserExpression>;
 
+    private:
+        std::string current_table_name_;
 
     };
 }

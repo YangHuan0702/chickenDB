@@ -20,6 +20,7 @@ static auto TransformConstantValue(Transformer &transformer, hsql::Expr *expr) -
 
 auto Transformer::TransformerUpdateStatement(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement> {
     auto update_statement = dynamic_cast<hsql::UpdateStatement*>(statement);
+    current_table_name_ = update_statement->table->name;
 
     auto r = std::make_unique<UpdateStatement>(update_statement->table->name);
 

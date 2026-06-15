@@ -15,6 +15,7 @@ auto Binder::BinderDeleteStatement(std::unique_ptr<SQLStatement> statement) -> s
                                       "[Binder] target parser statement is not delete type.");
     auto parser_delete_statement = dynamic_cast<DeleteStatement*>(statement.get());
 
+    std::string table_name  = parser_delete_statement->table_name_;
     auto table_catalog_entry = catalog_->GetTable(parser_delete_statement->table_name_);
     ChickenException::AssertCondition(table_catalog_entry != nullptr,"[Binder] Unknown table " + parser_delete_statement->table_name_);
     auto bound_delete_statement = std::make_unique<BoundDeleteStatement>(table_catalog_entry->table_id);

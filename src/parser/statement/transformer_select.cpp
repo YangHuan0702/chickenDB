@@ -10,8 +10,8 @@ using namespace chickenDB;
 
 auto Transformer::TransformerSelectStatement(hsql::SQLStatement *statement) -> std::unique_ptr<SQLStatement> {
     auto select_statement = dynamic_cast<hsql::SelectStatement*>(statement);
-
     hsql::TableRef *from = select_statement->fromTable;
+    current_table_name_ = from->name;
     std::unique_ptr<SelectStatement> r;
 
     if (from != nullptr && from->type == hsql::kTableJoin && from->join != nullptr) {

@@ -32,6 +32,7 @@ auto Binder::BinderStatement(std::vector<std::unique_ptr<SQLStatement> > stateme
 
 
 auto Binder::BoundExpression(std::unique_ptr<ParserExpression> expression) -> std::unique_ptr<chickenDB::BoundExpression> {
+    if (nullptr == expression) return nullptr;
     switch (expression->type_) {
         case ParserExpressionType::BINARY_OP: return BoundBinaryExpression(std::move(expression));
         case ParserExpressionType::COLUMN: return BoundColumnExpression(std::move(expression));

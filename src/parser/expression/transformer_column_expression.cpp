@@ -8,6 +8,6 @@
 using namespace chickenDB;
 
 auto Transformer::TransformerColumnRef(hsql::Expr *expr) -> std::unique_ptr<ParserExpression> {
-    return std::make_unique<ColumnRefExpression>(expr->table == nullptr ? "" : expr->table,
+    return std::make_unique<ColumnRefExpression>(expr->table == nullptr ? current_table_name_ : expr->table,
                                                 expr->name == nullptr ? "" : expr->name);
 }

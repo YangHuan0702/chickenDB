@@ -25,6 +25,7 @@ TEST(Executor,BasicCreateTableExecutorTest) {
     auto executor_context = std::make_unique<ExecutorContext>(buffer_manager,catalog);
 
     Planner planner;
+    planner.SetCatalog(catalog);
     Execution executor(std::move(executor_context));
     for (auto &statement : bound_statement) {
         auto logical_operator = planner.CreateLogicalPlanner(std::move(statement));
