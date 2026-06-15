@@ -17,6 +17,11 @@ namespace chickenDB {
         explicit Planner() = default;
         ~Planner() = default;
 
+        auto SetCatalog(std::shared_ptr<Catalog> catalog) -> void {
+            catalog_ = std::move(catalog);
+        }
+
+
 
         auto CreateLogicalPlanner(std::unique_ptr<BoundStatement> bound_statement) -> std::unique_ptr<LogicalOperator>;
         auto LogicalSelectPlanner(std::unique_ptr<BoundStatement> bound_statement) -> std::unique_ptr<LogicalOperator>;
@@ -47,7 +52,6 @@ namespace chickenDB {
         auto LogicalOperatorFilter(std::unique_ptr<BoundExpression> statement) -> std::unique_ptr<LogicalOperator>;
         auto LogicalOperatorProject(const std::vector<std::unique_ptr<BoundExpression>>& statement) -> std::unique_ptr<LogicalOperator>;
 
-    private:
         std::shared_ptr<Catalog> catalog_;
 
     };

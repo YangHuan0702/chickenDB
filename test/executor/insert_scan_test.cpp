@@ -26,6 +26,7 @@ namespace {
         auto bound = binder.BinderStatement(std::move(parser.statements_));
 
         Planner planner;
+        planner.SetCatalog(catalog);
         for (auto &stmt : bound) {
             auto logical = planner.CreateLogicalPlanner(std::move(stmt));
             auto physical = planner.CreatePhysicalPlanner(std::move(logical));
