@@ -39,7 +39,10 @@ auto VersionStore::CommitDelete(const RID &rid, timestamp_t commit_ts) -> void {
 
 auto VersionStore::AbortInsert(const RID &rid) -> void {
     std::lock_guard<std::mutex> lock(mutex_);
-    store_.erase(rid); // 创建被回滚：该行从此不可见
+    // 物理行仍留在页里，不能删除元数据；否则 IsVisible 会把它当成
+    // “事务系统启用前的旧数据”默认可见。保留一条未提交创建记录作为 tombstone。
+    VersionMeta meta;
+    store_[rid] = meta;
 }
 
 auto VersionStore::AbortDelete(const RID &rid) -> void {

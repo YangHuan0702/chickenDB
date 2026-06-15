@@ -62,13 +62,8 @@ TEST(VersionStore, AbortInsertRemovesRow) {
     vs.OnInsert(rid, 1);
     vs.AbortInsert(rid);
     Transaction reader(2, 10);
-    // 无元数据 -> 视为旧数据默认可见？AbortInsert 删除了条目，
-    // 但该行物理上仍在页里。语义上回滚的插入不应可见——此处由扫描层不产出该 RID
-    // 保证；version store 对“无元数据”默认可见仅用于事务系统启用前的旧数据。
-    // 这里仅验证条目已被移除。
-    VersionMeta meta;
-    EXPECT_FALSE(vs.GetMeta(rid, meta));
-    (void)reader;
+    // 回滚插入的物理行仍可能留在页里，version store 必须显式隐藏它。
+    EXPECT_FALSE(vs.IsVisible(rid, reader));
 }
 
 TEST(VersionStore, NoMetaDefaultsVisible) {
