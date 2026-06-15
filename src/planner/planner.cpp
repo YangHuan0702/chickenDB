@@ -25,6 +25,14 @@ auto Planner::CreatePhysicalPlanner(std::unique_ptr<LogicalOperator> logical_ope
     if (nullptr == logical_operator) {
         return nullptr;
     }
+
+    if (logical_operator->type_ == LogicalOperatorType::DELETE) {
+        return PhysicalDelete(std::move(logical_operator));
+    }
+    if (logical_operator->type_ == LogicalOperatorType::UPDATE) {
+        return PhysicalUpdate(std::move(logical_operator));
+    }
+
     auto logical_children = std::move(logical_operator->children_);
 
     std::unique_ptr<PhysicalOperator> physical_operator = nullptr;
