@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cstdlib>
 
 #include "buffer/buffer_manager.h"
 #include "catalog/catalog.h"
@@ -24,6 +25,49 @@
 using namespace chickenDB;
 
 namespace {
+    constexpr const char *kReset = "\033[0m";
+    constexpr const char *kBold = "\033[1m";
+    constexpr const char *kDim = "\033[2m";
+    constexpr const char *kCyan = "\033[36m";
+    constexpr const char *kGreen = "\033[32m";
+    constexpr const char *kYellow = "\033[33m";
+    constexpr const char *kRed = "\033[31m";
+
+    auto UseColor() -> bool {
+        const char *no_color = std::getenv("NO_COLOR");
+        if (no_color != nullptr && no_color[0] != '\0') return false;
+
+        const char *term = std::getenv("TERM");
+        if (term == nullptr) return false;
+        return std::string(term) != "dumb";
+    }
+
+    auto Paint(const char *color, const std::string &text) -> std::string {
+        if (!UseColor()) return text;
+        return std::string(color) + text + kReset;
+    }
+
+    auto PrintWelcome(const std::string &data_dir) -> void {
+        std::cout << Paint(kYellow,
+            "      __\n"
+            "   __( o)>\n"
+            "   \\ <_. )   chickenDB\n"
+            "    `---'    tiny SQL, fresh pages\n")
+                  << "\n"
+                  << Paint(kBold, "Welcome to chickenDB CLI") << "\n"
+                  << Paint(kDim, "data dir: ") << data_dir << "\n"
+                  << Paint(kDim, "tips: ") << "SQL 以分号结束；"
+                  << Paint(kCyan, "\\h") << " 帮助，"
+                  << Paint(kCyan, "\\q") << " 退出。\n\n";
+    }
+
+    auto Prompt(size_t statement_no) -> std::string {
+        std::ostringstream os;
+        os << Paint(kGreen, "chickendb") << Paint(kDim, "[") << statement_no
+           << Paint(kDim, "]") << Paint(kYellow, " => ");
+        return os.str();
+    }
+
     // 把一个 Value 转成可打印字符串。
     auto ValueToString(const Value &v) -> std::string {
         const auto &var = v.value_;
@@ -124,12 +168,12 @@ auto main(int argc, char **argv) -> int {
     auto log = std::make_shared<LogManager>();
     Session session(buffer, catalog, txn_mgr, vstore, log);
 
-    std::cout << "chickenDB CLI  (data dir: " << data_dir << ")\n"
-              << "输入 SQL 以分号结束；\\q 退出，\\h 帮助。\n";
+    PrintWelcome(data_dir);
 
     std::string line;
+    size_t statement_no = 1;
     while (true) {
-        std::cout << "chickendb> " << std::flush;
+        std::cout << Prompt(statement_no) << std::flush;
         if (!std::getline(std::cin, line)) {
             std::cout << "\n";
             break; // EOF (Ctrl-D)
@@ -138,8 +182,11 @@ auto main(int argc, char **argv) -> int {
         if (trimmed.empty()) continue;
         if (trimmed == "\\q" || trimmed == "exit" || trimmed == "quit") break;
         if (trimmed == "\\h" || trimmed == "help") {
-            std::cout << "支持：CREATE TABLE/INDEX, INSERT, SELECT(WHERE/GROUP BY/ORDER BY/JOIN),\n"
-                         "      DELETE, UPDATE, BEGIN/COMMIT/ROLLBACK。\\q 退出。\n";
+            std::cout << Paint(kBold, "可用命令\n")
+                      << "  SQL: CREATE TABLE/INDEX, INSERT, SELECT, DELETE, UPDATE\n"
+                      << "  查询: WHERE, GROUP BY, ORDER BY, JOIN\n"
+                      << "  事务: BEGIN, COMMIT, ROLLBACK\n"
+                      << "  CLI:  \\h/help 查看帮助，\\q/exit/quit 退出\n";
             continue;
         }
 
@@ -152,14 +199,15 @@ auto main(int argc, char **argv) -> int {
                 if (!rows.empty()) {
                     PrintResult(rows);
                 } else {
-                    std::cout << "OK\n";
+                    std::cout << Paint(kGreen, "OK") << "\n";
                 }
+                statement_no++;
             } catch (const std::exception &e) {
-                std::cout << "ERROR: " << e.what() << "\n";
+                std::cout << Paint(kRed, "ERROR: ") << e.what() << "\n";
             }
         }
     }
 
-    std::cout << "bye.\n";
+    std::cout << Paint(kDim, "bye. pages flushed, coop closed.") << "\n";
     return 0;
 }
