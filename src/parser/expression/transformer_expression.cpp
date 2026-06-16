@@ -23,6 +23,10 @@ auto Transformer::TransformerOperatorExpression(hsql::Expr *expr) -> std::unique
         case hsql::kOpMinus:
         case hsql::kOpAsterisk:
         case hsql::kOpSlash:
+        case hsql::kOpLike:
+        case hsql::kOpNotLike:
+        case hsql::kOpILike:
+        case hsql::kOpIn:
             return TransformerBinaryOperator(expr);
         case hsql::kOpIsNull:
         case hsql::kOpNot:

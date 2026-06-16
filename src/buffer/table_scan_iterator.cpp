@@ -8,6 +8,7 @@
 
 #include "buffer/table_data_page.h"
 #include "common/chicken_execption.h"
+#include "executor/varchar_codec.h"
 
 using namespace chickenDB;
 
@@ -58,7 +59,12 @@ auto TableScanIterator::FillChunkFromPage(Chunk &chunk) -> size_t {
     for (size_t c = 0; c < col_count; c++) {
         const size_t raw_size = page.GetColumnRaw(c, raw);
         Vector &vec = chunk.GetColumn(c);
-        if (raw_size > 0) {
+        if (vec.IsVar()) {
+            // 变长列：raw 是自描述的 Arrow 布局，反序列化重建 offsets + pool。
+            if (raw_size > 0) {
+                VarcharCodec::DeserializeVarlenColumn(raw.data(), raw_size, vec);
+            }
+        } else if (raw_size > 0) {
             std::memcpy(vec.GetData(), raw.data(), raw_size);
         }
         page.GetColumnValidity(c, validity);

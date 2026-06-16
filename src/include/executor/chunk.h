@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "common/enum/statement_type.h"
@@ -13,9 +15,14 @@
 #include "common/types.h"
 
 namespace chickenDB {
-    // A Vector is one column's worth of a Chunk: a flat, cache-friendly array of
-    // fixed-width values plus a validity (null) bitmap. Variable-length types are
-    // out of scope for now — only NUMBER (4B) and DOUBLE (8B) are supported.
+    // A Vector is one column's worth of a Chunk. Fixed-width types (NUMBER 4B,
+    // DOUBLE 8B) are stored as a flat, cache-friendly array indexed by row.
+    // Variable-length types (VARCHAR/VARCHAR2) use an Arrow-style layout: an
+    // offsets_ array of size capacity_+1 plus an append-only data_pool_, where
+    // row r occupies [offsets_[r], offsets_[r+1]) inside the pool. Both modes
+    // share the same validity (null) bitmap. The two storage paths never mix:
+    // fixed-width values go through GetValue<T>/SetValue<T>; varlen values go
+    // through GetString/AppendString/SetStringAt.
     class Vector {
     public:
         Vector() = default;
@@ -30,7 +37,21 @@ namespace chickenDB {
             type_ = type;
             capacity_ = capacity;
             type_size_ = TypeSizeConversion::TypeSize(type);
-            data_ = std::make_unique<char[]>(type_size_ * capacity);
+            is_var_ = IsVarlen(type);
+            if (is_var_) {
+                // 变长列：offsets_ 长度 capacity+1，初始全 0（空池）；data_pool_ 预留
+                // 经验容量（每行 16 字节）以减少扩容。type_size_ 为 0。
+                offsets_ = std::make_unique<int32_t[]>(capacity + 1);
+                std::memset(offsets_.get(), 0, (capacity + 1) * sizeof(int32_t));
+                data_pool_.clear();
+                data_pool_.reserve(capacity * 16);
+                append_cursor_ = 0;
+                data_.reset();
+            } else {
+                data_ = std::make_unique<char[]>(type_size_ * capacity);
+                offsets_.reset();
+                data_pool_.clear();
+            }
             // 1 bit per row, rounded up to whole bytes.
             validity_ = std::make_unique<uint8_t[]>((capacity + 7) / 8);
             std::memset(validity_.get(), 0xFF, (capacity + 7) / 8);
@@ -39,8 +60,10 @@ namespace chickenDB {
         [[nodiscard]] auto GetType() const -> ColumnType { return type_; }
         [[nodiscard]] auto TypeSize() const -> size_t { return type_size_; }
         [[nodiscard]] auto Capacity() const -> size_t { return capacity_; }
+        [[nodiscard]] auto IsVar() const -> bool { return is_var_; }
 
         // Raw column buffer — callers index it as type_size_-strided values.
+        // 仅对定长列有意义；变长列请用 GetString/AppendString。
         [[nodiscard]] auto GetData() -> char * { return data_.get(); }
         [[nodiscard]] auto GetData() const -> const char * { return data_.get(); }
 
@@ -56,6 +79,29 @@ namespace chickenDB {
         auto SetValue(size_t row, T v) -> void {
             std::memcpy(data_.get() + row * type_size_, &v, sizeof(T));
         }
+
+        // ---- 变长访问器（仅 VARCHAR/VARCHAR2 合法）----
+
+        // 取第 row 行的字符串视图（指向 data_pool_，Vector 存活期内有效）。
+        [[nodiscard]] auto GetString(size_t row) const -> std::string_view {
+            const int32_t begin = offsets_[row];
+            const int32_t end = offsets_[row + 1];
+            return std::string_view(data_pool_.data() + begin,
+                                    static_cast<size_t>(end - begin));
+        }
+
+        // 按行序追加一个字符串（要求 row 0,1,2... 顺序追加）。写池 + 设 offsets_[row+1]。
+        // 返回追加到的行号。这是 SeqScan/Insert/Filter 等顺序填充的主路径。
+        auto AppendString(std::string_view s) -> size_t {
+            const size_t row = append_cursor_;
+            data_pool_.insert(data_pool_.end(), s.begin(), s.end());
+            offsets_[row + 1] = static_cast<int32_t>(data_pool_.size());
+            append_cursor_ = row + 1;
+            return row;
+        }
+
+        // 当前已追加的变长行数（仅变长列）。
+        [[nodiscard]] auto VarRowCount() const -> size_t { return append_cursor_; }
 
         [[nodiscard]] auto IsValid(size_t row) const -> bool {
             return (validity_[row / 8] >> (row % 8)) & 1U;
@@ -73,12 +119,32 @@ namespace chickenDB {
         [[nodiscard]] auto GetValidity() -> uint8_t * { return validity_.get(); }
         [[nodiscard]] auto GetValidity() const -> const uint8_t * { return validity_.get(); }
 
+        // 直接以 Arrow 布局批量填充变长列（供反序列化用）：offsets[0..n] + 拼接数据。
+        // offsets 必须单调非降、offsets[0]==0。覆盖既有内容。
+        auto SetVarColumn(const int32_t *offsets, size_t n, const char *data,
+                          size_t data_len) -> void {
+            for (size_t i = 0; i <= n; i++) {
+                offsets_[i] = offsets[i];
+            }
+            data_pool_.assign(data, data + data_len);
+            append_cursor_ = n;
+        }
+
+        // 变长列的 offsets 原始数组（长度 VarRowCount()+1），供序列化读取。
+        [[nodiscard]] auto VarOffsets() const -> const int32_t * { return offsets_.get(); }
+        [[nodiscard]] auto VarPool() const -> const std::vector<char> & { return data_pool_; }
+
     private:
         ColumnType type_{ColumnType::NUMBER};
         size_t type_size_{0};
         size_t capacity_{0};
         std::unique_ptr<char[]> data_;
         std::unique_ptr<uint8_t[]> validity_;
+        // 变长存储（仅 is_var_ 为真时使用）。
+        bool is_var_{false};
+        std::unique_ptr<int32_t[]> offsets_;
+        std::vector<char> data_pool_;
+        size_t append_cursor_{0};
     };
 
 

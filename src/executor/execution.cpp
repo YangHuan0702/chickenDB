@@ -66,6 +66,10 @@ auto Execution::ExecuteQuery(std::unique_ptr<PhysicalOperator> plan) -> void {
                     case ColumnType::DOUBLE:
                         row.emplace_back(Value(vec.GetValue<double>(r)));
                         break;
+                    case ColumnType::VARCHAR:
+                    case ColumnType::VARCHAR2:
+                        row.emplace_back(Value(std::string(vec.GetString(r))));
+                        break;
                     default:
                         row.emplace_back(Value(std::monostate{}));
                         break;

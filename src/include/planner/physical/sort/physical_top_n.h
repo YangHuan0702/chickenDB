@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "planner/physical/physical_operator.h"
+#include "planner/physical/sort/sort_cell.h"
 #include "common/types.h"
 
 namespace chickenDB {
@@ -26,7 +27,7 @@ namespace chickenDB {
         std::vector<bool> sort_desc_;
 
     private:
-        std::vector<std::vector<double>> rows_;
+        std::vector<std::vector<SortCell>> rows_;
         std::vector<ColumnType> types_;
         std::vector<col_id_t> col_ids_;
         Chunk output_;

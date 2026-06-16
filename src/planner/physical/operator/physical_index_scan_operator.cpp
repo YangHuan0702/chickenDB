@@ -236,11 +236,14 @@ auto PhysicalIndexOnlyScan::Next() -> Chunk * {
         for (const auto &kv : entries) {
             if (ctx_->HasTxn() && !ctx_->version_store_->IsVisible(kv.second, *ctx_->txn_)) continue;
             for (size_t c = 0; c < out_ids.size(); c++) {
-                const double v = kv.first.vals[key_pos[c]];
-                if (out_types[c] == ColumnType::NUMBER) {
-                    output_.GetColumn(c).SetValue<int32_t>(out_row, static_cast<int32_t>(v));
+                const IndexKeyVal &kvval = kv.first.vals[key_pos[c]];
+                Vector &ocol = output_.GetColumn(c);
+                if (ocol.IsVar()) {
+                    ocol.AppendString(kvval.str);
+                } else if (out_types[c] == ColumnType::NUMBER) {
+                    ocol.SetValue<int32_t>(out_row, static_cast<int32_t>(kvval.num));
                 } else {
-                    output_.GetColumn(c).SetValue<double>(out_row, v);
+                    ocol.SetValue<double>(out_row, kvval.num);
                 }
             }
             out_row++;

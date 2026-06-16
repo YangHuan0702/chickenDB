@@ -268,8 +268,24 @@ auto Catalog::CreateIndex(const std::string &index_name, table_id_t table_id,
     info.unique = unique;
     info.root_page_id = -1;
 
-    // B+树 + 磁盘模式：用磁盘版（节点即页，重启不需扫表重建）。其余用内存版。
-    if (type == IndexType::BPlusTree && buffer_manager_ != nullptr) {
+    // 判断索引键列是否含变长(VARCHAR)列：磁盘版 B+树是定长 double 键布局，
+    // 无法承载变长键，故含变长键列时即便请求 B+树也用内存版。
+    bool has_varlen_key = false;
+    {
+        auto sit = schema_map_.find(table_id);
+        if (sit != schema_map_.end()) {
+            const SchemaPage *schema = sit->second.get();
+            for (col_id_t kc : key_cols) {
+                for (const auto &col : schema->columns_) {
+                    if (col.col_id == kc && IsVarlen(col.data_type)) { has_varlen_key = true; break; }
+                }
+            }
+        }
+    }
+
+    // B+树 + 磁盘模式 + 定长键：用磁盘版（节点即页，重启不需扫表重建）。
+    // 其余（哈希/位图，或含变长键的 B+树）用内存版。
+    if (type == IndexType::BPlusTree && buffer_manager_ != nullptr && !has_varlen_key) {
         auto disk = IndexFactory::CreateDiskBPlusTree(buffer_manager_, table_id, key_cols.size(), -1);
         info.root_page_id = static_cast<DiskBPlusTreeIndex *>(disk.get())->RootPageId();
         info.index = std::move(disk);
@@ -305,7 +321,7 @@ auto Catalog::GetIndex(const std::string &index_name) const -> const IndexInfo *
 }
 
 auto Catalog::MaintainIndexInsert(table_id_t table_id,
-                                  const std::function<double(col_id_t)> &col_value,
+                                  const std::function<IndexKeyVal(col_id_t)> &col_value,
                                   const RID &rid) -> void {
     std::lock_guard<std::mutex> lock(mutex_);
     auto tit = table_index_map_.find(table_id);
@@ -313,14 +329,14 @@ auto Catalog::MaintainIndexInsert(table_id_t table_id,
     for (uint32_t id : tit->second) {
         auto iit = index_map_.find(id);
         if (iit == index_map_.end() || iit->second.index == nullptr) continue;
-        std::vector<double> vals;
+        std::vector<IndexKeyVal> vals;
         for (col_id_t c : iit->second.key_cols) vals.push_back(col_value(c));
-        iit->second.index->Insert(IndexKey(vals), rid);
+        iit->second.index->Insert(IndexKey(std::move(vals)), rid);
     }
 }
 
 auto Catalog::MaintainIndexDelete(table_id_t table_id,
-                                  const std::function<double(col_id_t)> &col_value,
+                                  const std::function<IndexKeyVal(col_id_t)> &col_value,
                                   const RID &rid) -> void {
     std::lock_guard<std::mutex> lock(mutex_);
     auto tit = table_index_map_.find(table_id);
@@ -328,9 +344,9 @@ auto Catalog::MaintainIndexDelete(table_id_t table_id,
     for (uint32_t id : tit->second) {
         auto iit = index_map_.find(id);
         if (iit == index_map_.end() || iit->second.index == nullptr) continue;
-        std::vector<double> vals;
+        std::vector<IndexKeyVal> vals;
         for (col_id_t c : iit->second.key_cols) vals.push_back(col_value(c));
-        iit->second.index->Erase(IndexKey(vals), rid);
+        iit->second.index->Erase(IndexKey(std::move(vals)), rid);
     }
 }
 
@@ -579,15 +595,19 @@ auto Catalog::RebuildIndex(IndexInfo &info) -> void {
         const page_id_t page_no = it.CurrentPageNo();
         const size_t n = chunk.Count();
         for (size_t r = 0; r < n; r++) {
-            std::vector<double> vals;
+            std::vector<IndexKeyVal> vals;
             vals.reserve(key_idx.size());
             for (size_t ci : key_idx) {
                 const Vector &v = chunk.GetColumn(ci);
-                vals.push_back(v.GetType() == ColumnType::NUMBER
-                                   ? static_cast<double>(v.GetValue<int32_t>(r))
-                                   : v.GetValue<double>(r));
+                if (v.IsVar()) {
+                    vals.emplace_back(std::string(v.GetString(r)));
+                } else {
+                    vals.emplace_back(v.GetType() == ColumnType::NUMBER
+                                          ? static_cast<double>(v.GetValue<int32_t>(r))
+                                          : v.GetValue<double>(r));
+                }
             }
-            info.index->Insert(IndexKey(vals), RID(page_no, static_cast<uint32_t>(r)));
+            info.index->Insert(IndexKey(std::move(vals)), RID(page_no, static_cast<uint32_t>(r)));
         }
     }
 }

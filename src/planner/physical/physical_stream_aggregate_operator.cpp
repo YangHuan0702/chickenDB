@@ -59,6 +59,14 @@ auto PhysicalStreamAggregateOperator::Next() -> Chunk * {
             auto ait = col_map.find(agg_col_);
             ChickenException::AssertCondition(ait != col_map.end(), "[StreamAgg] aggregate column not found");
             agg_idx = ait->second;
+            // StreamAgg 输出 group 列固定为 DOUBLE，本期不支持 varchar group/agg 列
+            // （HashAggregate 支持 group by varchar）。
+            for (size_t gi : group_idx) {
+                ChickenException::AssertCondition(!in->GetColumn(gi).IsVar(),
+                    "[StreamAgg] varchar group column not supported");
+            }
+            ChickenException::AssertCondition(!in->GetColumn(agg_idx).IsVar(),
+                "[StreamAgg] varchar aggregate column not supported");
             resolved = true;
         }
 

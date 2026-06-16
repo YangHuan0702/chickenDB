@@ -33,6 +33,7 @@ auto PhysicalHashAggregateOperator::Close() -> void {
 auto PhysicalHashAggregateOperator::Next() -> Chunk * {
     if (!is_built_) {
         std::vector<size_t> group_idx;
+        std::vector<ColumnType> group_types;
         size_t agg_idx = 0;
         bool resolved = false;
 
@@ -44,11 +45,14 @@ auto PhysicalHashAggregateOperator::Next() -> Chunk * {
                     ChickenException::AssertCondition(it != col_map.end(),
                                                       "[HashAgg] group column not found");
                     group_idx.push_back(it->second);
+                    group_types.push_back(in->GetColumn(it->second).GetType());
                 }
                 auto ait = col_map.find(agg_col_);
                 ChickenException::AssertCondition(ait != col_map.end(),
                                                   "[HashAgg] aggregate column not found");
                 agg_idx = ait->second;
+                ChickenException::AssertCondition(!in->GetColumn(agg_idx).IsVar(),
+                                                  "[HashAgg] aggregate on varchar column not supported");
                 resolved = true;
             }
 
@@ -56,12 +60,18 @@ auto PhysicalHashAggregateOperator::Next() -> Chunk * {
             for (size_t r = 0; r < n; r++) {
                 std::string key = ChunkUtil::RowKey(*in, r, group_idx);
                 auto &entry = hash_table_[key];
-                if (entry.group_vals.empty() && !group_idx.empty()) {
-                    for (size_t gi : group_idx) {
-                        const Vector &gv = in->GetColumn(gi);
-                        entry.group_vals.push_back(gv.GetType() == ColumnType::NUMBER
-                                                       ? static_cast<double>(gv.GetValue<int32_t>(r))
-                                                       : gv.GetValue<double>(r));
+                if (entry.group_vals.empty() && entry.group_strs.empty() && !group_idx.empty()) {
+                    entry.group_vals.resize(group_idx.size(), 0.0);
+                    entry.group_strs.resize(group_idx.size());
+                    for (size_t gpos = 0; gpos < group_idx.size(); gpos++) {
+                        const Vector &gv = in->GetColumn(group_idx[gpos]);
+                        if (gv.IsVar()) {
+                            entry.group_strs[gpos] = std::string(gv.GetString(r));
+                        } else {
+                            entry.group_vals[gpos] = gv.GetType() == ColumnType::NUMBER
+                                                         ? static_cast<double>(gv.GetValue<int32_t>(r))
+                                                         : gv.GetValue<double>(r);
+                        }
                     }
                 }
                 const Vector &av = in->GetColumn(agg_idx);
@@ -72,12 +82,15 @@ auto PhysicalHashAggregateOperator::Next() -> Chunk * {
             }
         }
 
-        // 物化所有组到一个输出 chunk：group 列(DOUBLE)... + 聚合结果列。
+        // 物化所有组到一个输出 chunk：group 列(保持原类型)... + 聚合结果列。
         // 聚合结果列类型：COUNT 为 NUMBER（整数计数），其余为 DOUBLE。
         const size_t num_groups = hash_table_.empty() ? 1 : hash_table_.size();
         const bool agg_is_count = (agg_func_ == AggFuncType::COUNT);
         std::vector<ColumnType> out_types;
-        for (size_t i = 0; i < col_ids_.size(); i++) out_types.push_back(ColumnType::DOUBLE);
+        for (size_t i = 0; i < col_ids_.size(); i++) {
+            // 若已解析到原始 group 列类型则沿用（保留 VARCHAR），否则退化为 DOUBLE。
+            out_types.push_back(i < group_types.size() ? group_types[i] : ColumnType::DOUBLE);
+        }
         out_types.push_back(agg_is_count ? ColumnType::NUMBER : ColumnType::DOUBLE);
         output_.Init(out_types, num_groups);
 
@@ -88,7 +101,12 @@ auto PhysicalHashAggregateOperator::Next() -> Chunk * {
         size_t row = 0;
         for (auto &kv : hash_table_) {
             for (size_t g = 0; g < col_ids_.size(); g++) {
-                output_.GetColumn(g).SetValue<double>(row, kv.second.group_vals[g]);
+                Vector &gcol = output_.GetColumn(g);
+                if (gcol.IsVar()) {
+                    gcol.AppendString(kv.second.group_strs[g]);
+                } else {
+                    gcol.SetValue<double>(row, kv.second.group_vals[g]);
+                }
             }
             const double res = kv.second.state.Result(agg_func_);
             if (agg_is_count) {

@@ -11,8 +11,9 @@ auto Planner::LogicalOperatorProject(const std::vector<std::unique_ptr<BoundExpr
 
     auto logical_project = std::make_unique<LogicalProject>();
     for (const auto &bound_expression : statement) {
-        auto bound_column_expression = dynamic_cast<BoundColumnExpression*>(bound_expression.get());
-        logical_project->col_ids_.push_back(bound_column_expression->col_id_);
+        if (auto bound_column_expression = dynamic_cast<BoundColumnExpression*>(bound_expression.get())) {
+            logical_project->col_ids_.push_back(bound_column_expression->col_id_);
+        }
     }
     return logical_project;
 }

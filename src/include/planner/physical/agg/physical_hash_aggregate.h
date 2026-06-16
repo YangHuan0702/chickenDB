@@ -33,10 +33,12 @@ namespace chickenDB {
         col_id_t agg_col_;                // 聚合列
         AggFuncType agg_func_;            // 聚合函数类型
 
-        // group key 序列化 -> 聚合状态 + 该组的 group-by 列值（double，用于输出）
+        // group key 序列化 -> 聚合状态 + 该组的 group-by 列值（定长存 double，
+        // 变长存 string，按 group_is_str 分流，用于输出）。
         struct GroupEntry {
             AggregateState state;
             std::vector<double> group_vals;
+            std::vector<std::string> group_strs;
         };
         std::unordered_map<std::string, GroupEntry> hash_table_;
 

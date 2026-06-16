@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "buffer/page.h"
+#include "common/chicken_execption.h"
 #include "common/constants.h"
 #include "common/enum/page_type.h"
 
@@ -77,6 +78,7 @@ auto DiskBPlusTreeIndex::WriteHeader(char *data, const NodeView &v) const -> voi
 }
 
 auto DiskBPlusTreeIndex::KeyAt(const char *data, uint16_t i) const -> IndexKey {
+    // 磁盘 B+树是定长 double 键布局，不支持变长(VARCHAR)键。
     std::vector<double> vals(key_cols_);
     const char *p = data + OFF_KEYS + static_cast<size_t>(i) * KeyBytes();
     std::memcpy(vals.data(), p, KeyBytes());
@@ -84,8 +86,15 @@ auto DiskBPlusTreeIndex::KeyAt(const char *data, uint16_t i) const -> IndexKey {
 }
 
 auto DiskBPlusTreeIndex::SetKeyAt(char *data, uint16_t i, const IndexKey &k) const -> void {
+    // 磁盘 B+树仅支持定长数值键；若键含字符串分量，说明上层误用，立即报错。
     char *p = data + OFF_KEYS + static_cast<size_t>(i) * KeyBytes();
-    std::memcpy(p, k.vals.data(), KeyBytes());
+    std::vector<double> nums(key_cols_, 0.0);
+    for (size_t c = 0; c < key_cols_ && c < k.vals.size(); c++) {
+        ChickenException::AssertCondition(!k.vals[c].is_str,
+            "[DiskBPlusTree] varchar keys not supported; use in-memory index");
+        nums[c] = k.vals[c].num;
+    }
+    std::memcpy(p, nums.data(), KeyBytes());
 }
 
 auto DiskBPlusTreeIndex::LeafRidAt(const char *data, uint16_t i) const -> RID {

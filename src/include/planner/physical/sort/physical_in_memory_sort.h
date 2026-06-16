@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "planner/physical/physical_operator.h"
+#include "planner/physical/sort/sort_cell.h"
 #include "common/types.h"
 
 namespace chickenDB {
@@ -26,8 +27,8 @@ namespace chickenDB {
         std::vector<bool> sort_desc_;
 
     private:
-        // 物化的所有行（按 sorted 后顺序），逐行存为列值的 double（定长）。
-        std::vector<std::vector<double>> rows_;
+        // 物化的所有行（按 sorted 后顺序）。每个单元格 SortCell：定长列存 num，变长列存 str。
+        std::vector<std::vector<SortCell>> rows_;
         std::vector<ColumnType> types_;
         std::vector<col_id_t> col_ids_;
         Chunk output_;

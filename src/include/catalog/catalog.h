@@ -52,9 +52,9 @@ public:
     // DML 索引维护：对某表的全部活索引，按行的键列值插入/删除 (key, rid)。
     // key_value_of_col(col_id) 返回该行在某列上的值（double）。供执行器在写数据页后调用。
     auto MaintainIndexInsert(table_id_t table_id,
-                             const std::function<double(col_id_t)> &col_value, const RID &rid) -> void;
+                             const std::function<IndexKeyVal(col_id_t)> &col_value, const RID &rid) -> void;
     auto MaintainIndexDelete(table_id_t table_id,
-                             const std::function<double(col_id_t)> &col_value, const RID &rid) -> void;
+                             const std::function<IndexKeyVal(col_id_t)> &col_value, const RID &rid) -> void;
 
     auto LoadFromDisk() -> void;
     auto InitFreshDisk() -> void;

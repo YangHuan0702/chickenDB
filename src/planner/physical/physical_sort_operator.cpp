@@ -22,8 +22,23 @@
 using namespace chickenDB;
 
 namespace {
-    // 把孩子的全部输出物化为 rows（每行各列值取 double），并记录列类型/col_ids。
-    auto Materialize(PhysicalOperator *child, std::vector<std::vector<double>> &rows,
+    // 取第 r 行第 c 列为一个 SortCell（变长列存字符串，定长列存 double）。
+    auto CellOf(const Vector &v, size_t r) -> SortCell {
+        SortCell cell;
+        if (v.IsVar()) {
+            cell.is_str = true;
+            cell.str = std::string(v.GetString(r));
+        } else {
+            cell.is_str = false;
+            cell.num = v.GetType() == ColumnType::NUMBER
+                           ? static_cast<double>(v.GetValue<int32_t>(r))
+                           : v.GetValue<double>(r);
+        }
+        return cell;
+    }
+
+    // 把孩子的全部输出物化为 rows（每行各列存 SortCell），并记录列类型/col_ids。
+    auto Materialize(PhysicalOperator *child, std::vector<std::vector<SortCell>> &rows,
                      std::vector<ColumnType> &types, std::vector<col_id_t> &col_ids,
                      std::vector<size_t> &sort_idx, const std::vector<col_id_t> &sort_cols) -> void {
         bool resolved = false;
@@ -42,12 +57,9 @@ namespace {
             const size_t n = in->Count();
             const size_t cols = in->ColumnCount();
             for (size_t r = 0; r < n; r++) {
-                std::vector<double> row(cols);
+                std::vector<SortCell> row(cols);
                 for (size_t c = 0; c < cols; c++) {
-                    const Vector &v = in->GetColumn(c);
-                    row[c] = v.GetType() == ColumnType::NUMBER
-                                 ? static_cast<double>(v.GetValue<int32_t>(r))
-                                 : v.GetValue<double>(r);
+                    row[c] = CellOf(in->GetColumn(c), r);
                 }
                 rows.push_back(std::move(row));
             }
@@ -55,30 +67,41 @@ namespace {
     }
 
     // 按 sort_idx 列比较两行；desc[i] 指定该列降序（缺省升序）。
+    // 单元格按 is_str 分流：字符串字典序，数值 double 序。
     auto MakeComparator(const std::vector<size_t> &sort_idx, const std::vector<bool> &desc) {
-        return [sort_idx, desc](const std::vector<double> &a, const std::vector<double> &b) {
+        return [sort_idx, desc](const std::vector<SortCell> &a, const std::vector<SortCell> &b) {
             for (size_t k = 0; k < sort_idx.size(); k++) {
                 const size_t idx = sort_idx[k];
                 const bool d = k < desc.size() ? desc[k] : false;
-                if (a[idx] < b[idx]) return !d;  // 升序 a<b 在前；降序则相反
-                if (a[idx] > b[idx]) return d;
+                const SortCell &ca = a[idx];
+                const SortCell &cb = b[idx];
+                if (ca.is_str) {
+                    if (ca.str < cb.str) return !d;
+                    if (ca.str > cb.str) return d;
+                } else {
+                    if (ca.num < cb.num) return !d;
+                    if (ca.num > cb.num) return d;
+                }
             }
             return false;
         };
     }
 
-    // 把已排序的 rows 物化进 output（一次性，全部行）。
-    auto EmitRows(Chunk &output, const std::vector<std::vector<double>> &rows,
+    // 把已排序的 rows 物化进 output（一次性，全部行）。变长列用 AppendString 顺序追加。
+    auto EmitRows(Chunk &output, const std::vector<std::vector<SortCell>> &rows,
                   const std::vector<ColumnType> &types, const std::vector<col_id_t> &col_ids) -> void {
         const size_t n = rows.empty() ? 1 : rows.size();
         output.Init(types, n);
         output.SetColIds(col_ids);
         for (size_t r = 0; r < rows.size(); r++) {
             for (size_t c = 0; c < types.size(); c++) {
-                if (types[c] == ColumnType::NUMBER) {
-                    output.GetColumn(c).SetValue<int32_t>(r, static_cast<int32_t>(rows[r][c]));
+                Vector &col = output.GetColumn(c);
+                if (col.IsVar()) {
+                    col.AppendString(rows[r][c].str);
+                } else if (types[c] == ColumnType::NUMBER) {
+                    col.SetValue<int32_t>(r, static_cast<int32_t>(rows[r][c].num));
                 } else {
-                    output.GetColumn(c).SetValue<double>(r, rows[r][c]);
+                    col.SetValue<double>(r, rows[r][c].num);
                 }
             }
         }
@@ -170,14 +193,16 @@ auto PhysicalExternalSort::Close() -> void {
 namespace {
     constexpr size_t K_RUN_ROWS = 4096; // 每个 run 的最大行数（内存阈值）
 
-    // 把若干行写入一个 run 文件（每行 ncols 个 double，紧凑）。
-    auto WriteRun(const std::string &path, const std::vector<std::vector<double>> &rows,
+    // 把若干行写入一个 run 文件（每行 ncols 个 double，紧凑）。仅定长列。
+    auto WriteRun(const std::string &path, const std::vector<std::vector<SortCell>> &rows,
                   size_t ncols) -> void {
         int fd = ::open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
         if (fd < 0) return;
+        std::vector<double> flat(ncols);
         off_t off = 0;
         for (const auto &row : rows) {
-            ::pwrite(fd, row.data(), ncols * sizeof(double), off);
+            for (size_t c = 0; c < ncols; c++) flat[c] = row[c].num;
+            ::pwrite(fd, flat.data(), ncols * sizeof(double), off);
             off += static_cast<off_t>(ncols * sizeof(double));
         }
         ::close(fd);
@@ -193,7 +218,7 @@ auto PhysicalExternalSort::Next() -> Chunk * {
     std::vector<size_t> sort_idx;
     size_t ncols = 0;
     std::vector<std::string> run_paths;
-    std::vector<std::vector<double>> buf;
+    std::vector<std::vector<SortCell>> buf;
     const std::string base = GetDataPath() + "/extsort_run_";
     size_t run_id = 0;
 
@@ -203,6 +228,12 @@ auto PhysicalExternalSort::Next() -> Chunk * {
             types_ = ChunkUtil::TypesOf(*in);
             col_ids_ = in->ColIds();
             ncols = in->ColumnCount();
+            // ExternalSort 的 run 文件是定长 double 紧凑布局，无法承载变长列。
+            // 含 VARCHAR 列时本期不支持磁盘外排（应改用 InMemorySort/TopN）。
+            for (const auto &t : types_) {
+                ChickenException::AssertCondition(!IsVarlen(t),
+                    "[ExternalSort] varchar columns not supported; use in-memory sort");
+            }
             auto col_map = ChunkUtil::BuildColMap(*in);
             for (col_id_t cid : sort_cols_) {
                 auto it = col_map.find(cid);
@@ -213,12 +244,9 @@ auto PhysicalExternalSort::Next() -> Chunk * {
         }
         const size_t n = in->Count();
         for (size_t r = 0; r < n; r++) {
-            std::vector<double> row(ncols);
+            std::vector<SortCell> row(ncols);
             for (size_t c = 0; c < ncols; c++) {
-                const Vector &v = in->GetColumn(c);
-                row[c] = v.GetType() == ColumnType::NUMBER
-                             ? static_cast<double>(v.GetValue<int32_t>(r))
-                             : v.GetValue<double>(r);
+                row[c] = CellOf(in->GetColumn(c), r);
             }
             buf.push_back(std::move(row));
             if (buf.size() >= K_RUN_ROWS) {
@@ -245,12 +273,22 @@ auto PhysicalExternalSort::Next() -> Chunk * {
     }
 
     // K 路归并：打开所有 run，各维护一个读游标，用比较器选最小行。
+    // ExternalSort 仅定长列（已在上面断言），故 run 行是紧凑 double；比较前包成 SortCell。
     struct RunReader {
         int fd;
         off_t off;
         off_t size;
-        std::vector<double> cur;
+        std::vector<SortCell> cur;
         bool valid;
+    };
+    auto read_row = [&](RunReader &rr) -> void {
+        std::vector<double> flat(ncols);
+        ::pread(rr.fd, flat.data(), ncols * sizeof(double), rr.off);
+        rr.off += static_cast<off_t>(ncols * sizeof(double));
+        for (size_t c = 0; c < ncols; c++) {
+            rr.cur[c].is_str = false;
+            rr.cur[c].num = flat[c];
+        }
     };
     auto cmp = MakeComparator(sort_idx, sort_desc_);
     std::vector<RunReader> readers(run_paths.size());
@@ -262,13 +300,12 @@ auto PhysicalExternalSort::Next() -> Chunk * {
         readers[i].cur.resize(ncols);
         readers[i].valid = false;
         if (readers[i].fd >= 0 && readers[i].off < readers[i].size) {
-            ::pread(readers[i].fd, readers[i].cur.data(), ncols * sizeof(double), readers[i].off);
-            readers[i].off += static_cast<off_t>(ncols * sizeof(double));
+            read_row(readers[i]);
             readers[i].valid = true;
         }
     }
 
-    std::vector<std::vector<double>> merged;
+    std::vector<std::vector<SortCell>> merged;
     while (true) {
         int best = -1;
         for (size_t i = 0; i < readers.size(); i++) {
@@ -281,8 +318,7 @@ auto PhysicalExternalSort::Next() -> Chunk * {
         merged.push_back(readers[static_cast<size_t>(best)].cur);
         RunReader &rr = readers[static_cast<size_t>(best)];
         if (rr.off < rr.size) {
-            ::pread(rr.fd, rr.cur.data(), ncols * sizeof(double), rr.off);
-            rr.off += static_cast<off_t>(ncols * sizeof(double));
+            read_row(rr);
         } else {
             rr.valid = false;
         }

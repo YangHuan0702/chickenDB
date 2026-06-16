@@ -67,13 +67,14 @@ auto Execution::ExecuteDelete(std::unique_ptr<PhysicalOperator> plan) -> void {
                 ExpressionEvaluator::EvalPredicate(op->predicate_.get(), chunk, r, col_map)) {
                 MarkDelete(context_.get(), op->table_id_, rid);
                 // 索引维护：从该表活索引删除此行的键。
-                auto col_value = [&](col_id_t cid) -> double {
+                auto col_value = [&](col_id_t cid) -> IndexKeyVal {
                     auto cit = col_map.find(cid);
-                    if (cit == col_map.end()) return 0;
+                    if (cit == col_map.end()) return IndexKeyVal(0.0);
                     const Vector &v = chunk.GetColumn(cit->second);
-                    return v.GetType() == ColumnType::NUMBER
-                               ? static_cast<double>(v.GetValue<int32_t>(r))
-                               : v.GetValue<double>(r);
+                    if (v.IsVar()) return IndexKeyVal(std::string(v.GetString(r)));
+                    return IndexKeyVal(v.GetType() == ColumnType::NUMBER
+                                           ? static_cast<double>(v.GetValue<int32_t>(r))
+                                           : v.GetValue<double>(r));
                 };
                 context_->catalog_->MaintainIndexDelete(op->table_id_, col_value, rid);
             }
@@ -90,6 +91,13 @@ auto Execution::ExecuteUpdate(std::unique_ptr<PhysicalOperator> plan) -> void {
     auto buffer = context_->buffer_manager_;
     const SchemaPage *schema = catalog->GetSchema(op->table_id_);
     ChickenException::AssertCondition(schema != nullptr, "[ExecuteUpdate] schema not found");
+
+    // UPDATE 当前把行物化为 double（旧行/新行），不支持变长列；含 VARCHAR 列报错。
+    // （DELETE 已支持变长；UPDATE 的变长支持留待后续。）
+    for (const auto &col : schema->columns_) {
+        ChickenException::AssertCondition(!IsVarlen(col.data_type),
+            "[ExecuteUpdate] update on table with varchar column not supported yet");
+    }
 
     // col_id -> 新值 映射。
     std::unordered_map<col_id_t, const Value *> set_map;
@@ -163,7 +171,7 @@ auto Execution::ExecuteUpdate(std::unique_ptr<PhysicalOperator> plan) -> void {
     for (size_t i = 0; i < to_delete.size(); i++) {
         MarkDelete(context_.get(), op->table_id_, to_delete[i]);
         const std::vector<double> &orow = old_rows[i];
-        auto col_value = [&](col_id_t cid) -> double { return orow[col_idx_of(cid)]; };
+        auto col_value = [&](col_id_t cid) -> IndexKeyVal { return IndexKeyVal(orow[col_idx_of(cid)]); };
         context_->catalog_->MaintainIndexDelete(op->table_id_, col_value, to_delete[i]);
     }
 
@@ -215,7 +223,7 @@ auto Execution::ExecuteUpdate(std::unique_ptr<PhysicalOperator> plan) -> void {
         // 索引维护：新行键插入。
         {
             RID rid(page_no, 0);
-            auto col_value = [&](col_id_t cid) -> double { return row[col_idx_of(cid)]; };
+            auto col_value = [&](col_id_t cid) -> IndexKeyVal { return IndexKeyVal(row[col_idx_of(cid)]); };
             context_->catalog_->MaintainIndexInsert(op->table_id_, col_value, rid);
         }
         context_->catalog_->AddRowCount(op->table_id_, 1);

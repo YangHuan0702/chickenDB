@@ -28,6 +28,12 @@ namespace chickenDB {
                 if (!resolved) {
                     r.types = ChunkUtil::TypesOf(*in);
                     r.col_ids = in->ColIds();
+                    // 连接当前把行物化为 double，不支持变长(VARCHAR)列；含变长列报错而非
+                    // 静默损坏（数值列连接不受影响）。
+                    for (const auto &t : r.types) {
+                        ChickenException::AssertCondition(!IsVarlen(t),
+                            "[Join] varchar columns in join not supported yet");
+                    }
                     auto col_map = ChunkUtil::BuildColMap(*in);
                     for (col_id_t cid : keys) {
                         auto it = col_map.find(cid);

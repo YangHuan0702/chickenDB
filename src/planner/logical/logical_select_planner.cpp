@@ -18,8 +18,9 @@
 using namespace chickenDB;
 
 namespace {
-    // 若 where 是 “col = const” 形式，取出 col_id 与常量值（double）。返回是否匹配。
-    auto MatchEquality(const BoundExpression *expr, col_id_t &out_col, double &out_val) -> bool {
+    // 若 where 是 “col = const” 形式，取出 col_id 与常量构成的索引查找键（数值或字符串）。
+    // 返回是否匹配。out_key 为单分量 IndexKey，供索引点查。
+    auto MatchEquality(const BoundExpression *expr, col_id_t &out_col, IndexKey &out_key) -> bool {
         if (expr == nullptr || expr->type_ != BinderExpressionType::BINARY_OP) return false;
         const auto *bin = static_cast<const BoundBinaryExpression *>(expr);
         if (bin->type_ != BinaryOpExpressionType::EQ) return false;
@@ -38,12 +39,20 @@ namespace {
             return false;
         }
         const auto &v = con->val_.value_;
+        double out_val = 0;
         if (std::holds_alternative<int64_t>(v)) out_val = static_cast<double>(std::get<int64_t>(v));
         else if (std::holds_alternative<int>(v)) out_val = static_cast<double>(std::get<int>(v));
         else if (std::holds_alternative<double>(v)) out_val = std::get<double>(v);
         else if (std::holds_alternative<float>(v)) out_val = static_cast<double>(std::get<float>(v));
-        else return false;
+        else if (std::holds_alternative<std::string>(v)) {
+            out_col = col->col_id_;
+            out_key = IndexKey(std::vector<IndexKeyVal>{IndexKeyVal(std::get<std::string>(v))});
+            return true;
+        } else {
+            return false;
+        }
         out_col = col->col_id_;
+        out_key = IndexKey(std::vector<double>{out_val});
         return true;
     }
 
@@ -106,15 +115,15 @@ auto Planner::LogicalSelectPlanner(std::unique_ptr<BoundStatement> bound_stateme
     // Filter 仍保留在上层做安全复核（语义恒正确）。
     if (bound_select_statement->where_) {
         col_id_t eq_col = 0;
-        double eq_val = 0;
-        if (MatchEquality(bound_select_statement->where_.get(), eq_col, eq_val)) {
+        IndexKey eq_key;
+        if (MatchEquality(bound_select_statement->where_.get(), eq_col, eq_key)) {
             auto indexes = catalog_->GetTableIndexes(bound_select_statement->table_id_);
             for (const auto *info : indexes) {
                 if (info->key_cols.size() == 1 && info->key_cols[0] == eq_col) {
                     auto *logical_scan = dynamic_cast<LogicalScan *>(scan.get());
                     logical_scan->use_index_ = true;
                     logical_scan->index_name_ = info->index_name;
-                    logical_scan->lookup_key_ = IndexKey(std::vector<double>{eq_val});
+                    logical_scan->lookup_key_ = eq_key;
                     break;
                 }
             }
