@@ -6,14 +6,19 @@
 //
 #include <cstdlib>
 #include <filesystem>
+#include <variant>
 
 #include "gtest/gtest.h"
 
 #include "binder/binder.h"
 #include "buffer/table_scan_iterator.h"
 #include "executor/execution.h"
+#include "executor/session.h"
 #include "parser/parser.h"
 #include "planner/planner.h"
+#include "transaction/log_manager.h"
+#include "transaction/transaction_manager.h"
+#include "transaction/version_store.h"
 
 using namespace chickenDB;
 
@@ -95,6 +100,40 @@ TEST(InsertScan, InsertThenScanFixedLengthColumns) {
     EXPECT_DOUBLE_EQ(got_b[0], 1.5);
     EXPECT_DOUBLE_EQ(got_b[1], 2.5);
     EXPECT_DOUBLE_EQ(got_b[2], 3.5);
+
+    std::filesystem::remove_all(data_dir, ec);
+}
+
+TEST(InsertScan, SelectStarExpandsColumnsAndNamesResult) {
+    const std::string data_dir = "./data/select_star_columns_test";
+#ifdef _WIN32
+    _putenv_s("CHICKENDB_DATA_PATH", data_dir.c_str());
+#else
+    setenv("CHICKENDB_DATA_PATH", data_dir.c_str(), 1);
+#endif
+    std::error_code ec;
+    std::filesystem::remove_all(data_dir, ec);
+
+    auto lru = std::make_shared<LRUTableManager>();
+    auto buffer = std::make_shared<BufferManager>(lru);
+    auto catalog = std::make_shared<Catalog>(buffer);
+    auto txn_mgr = std::make_shared<TransactionManager>();
+    auto vstore = std::make_shared<VersionStore>();
+    auto log = std::make_shared<LogManager>();
+    Session session(buffer, catalog, txn_mgr, vstore, log);
+
+    session.Execute("create table t (a INT, b DOUBLE)");
+    session.Execute("insert into t (a, b) values (7, 2.5)");
+    session.Execute("select * from t");
+
+    ASSERT_EQ(session.LastColumnNames().size(), 2U);
+    EXPECT_EQ(session.LastColumnNames()[0], "a");
+    EXPECT_EQ(session.LastColumnNames()[1], "b");
+
+    ASSERT_EQ(session.LastResult().size(), 1U);
+    ASSERT_EQ(session.LastResult()[0].size(), 2U);
+    EXPECT_EQ(std::get<int>(session.LastResult()[0][0].value_), 7);
+    EXPECT_DOUBLE_EQ(std::get<double>(session.LastResult()[0][1].value_), 2.5);
 
     std::filesystem::remove_all(data_dir, ec);
 }

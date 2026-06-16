@@ -86,13 +86,30 @@ namespace {
     }
 
     // 把结果行集打印成对齐的表格。
-    auto PrintResult(const std::vector<std::vector<Value>> &rows) -> void {
-        if (rows.empty()) {
+    auto PrintResult(const std::vector<std::string> &columns, const std::vector<std::vector<Value>> &rows) -> void {
+        size_t ncols = columns.size();
+        for (const auto &row : rows) {
+            ncols = std::max(ncols, row.size());
+        }
+        if (ncols == 0) {
             std::cout << "(0 rows)\n";
             return;
         }
-        const size_t ncols = rows[0].size();
-        std::vector<size_t> width(ncols, 3); // 至少容纳列号占位
+
+        std::vector<std::string> headers;
+        headers.reserve(ncols);
+        for (size_t c = 0; c < ncols; c++) {
+            if (c < columns.size() && !columns[c].empty()) {
+                headers.push_back(columns[c]);
+            } else {
+                headers.push_back("column_" + std::to_string(c + 1));
+            }
+        }
+
+        std::vector<size_t> width(ncols, 0);
+        for (size_t c = 0; c < ncols; c++) {
+            width[c] = headers[c].size();
+        }
         std::vector<std::vector<std::string>> cells;
         cells.reserve(rows.size());
         for (const auto &row : rows) {
@@ -112,6 +129,13 @@ namespace {
             }
             std::cout << "\n";
         };
+        sep();
+        std::cout << "|";
+        for (size_t c = 0; c < ncols; c++) {
+            const std::string &s = headers[c];
+            std::cout << " " << s << std::string(width[c] - s.size(), ' ') << " |";
+        }
+        std::cout << "\n";
         sep();
         for (const auto &line : cells) {
             std::cout << "|";
@@ -196,8 +220,9 @@ auto main(int argc, char **argv) -> int {
             try {
                 session.Execute(sql);
                 const auto &rows = session.LastResult();
-                if (!rows.empty()) {
-                    PrintResult(rows);
+                const auto &columns = session.LastColumnNames();
+                if (!rows.empty() || !columns.empty()) {
+                    PrintResult(columns, rows);
                 } else {
                     std::cout << Paint(kGreen, "OK") << "\n";
                 }

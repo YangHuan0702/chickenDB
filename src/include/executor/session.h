@@ -33,6 +33,7 @@ namespace chickenDB {
         auto Execute(const std::string &sql) -> void;
 
         auto LastResult() const -> const std::vector<std::vector<Value>> & { return last_result_; }
+        auto LastColumnNames() const -> const std::vector<std::string> & { return last_column_names_; }
 
     private:
         auto BeginTxn() -> void;
@@ -50,5 +51,6 @@ namespace chickenDB {
         std::shared_ptr<Transaction> current_txn_{nullptr};
         bool in_explicit_txn_{false};
         std::vector<std::vector<Value>> last_result_;
+        std::vector<std::string> last_column_names_;
     };
 }

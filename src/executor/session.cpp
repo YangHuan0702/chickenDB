@@ -4,6 +4,8 @@
 #include "executor/session.h"
 
 #include "binder/binder.h"
+#include "binder/expression/bound_column_expression.h"
+#include "binder/statement/bound_select_statement.h"
 #include "common/chicken_execption.h"
 #include "executor/execution.h"
 #include "executor/executor_context.h"
@@ -13,6 +15,41 @@
 #include "transaction/log_record.h"
 
 using namespace chickenDB;
+
+namespace {
+    auto ColumnNameFor(const std::shared_ptr<Catalog> &catalog, table_id_t table_id, col_id_t col_id) -> std::string {
+        const SchemaPage *schema = catalog->GetSchema(table_id);
+        if (schema == nullptr) return "";
+        for (const auto &col : schema->columns_) {
+            if (col.col_id == col_id) return col.GetColumnName();
+        }
+        return "";
+    }
+
+    auto ResultColumnNames(const std::shared_ptr<Catalog> &catalog, const BoundStatement *statement)
+        -> std::vector<std::string> {
+        std::vector<std::string> names;
+        if (statement == nullptr || statement->type_ != StatementType::SELECT) return names;
+
+        const auto *select = dynamic_cast<const BoundSelectStatement *>(statement);
+        if (select == nullptr) return names;
+
+        for (const auto &expr : select->columns_) {
+            const auto *col = dynamic_cast<const BoundColumnExpression *>(expr.get());
+            if (col == nullptr) {
+                names.emplace_back("");
+                continue;
+            }
+
+            std::string name = ColumnNameFor(catalog, col->table_id_, col->col_id_);
+            if (col->is_aggregate_ && !col->agg_func_.empty()) {
+                name = col->agg_func_ + "(" + name + ")";
+            }
+            names.push_back(name.empty() ? "column" : name);
+        }
+        return names;
+    }
+}
 
 Session::Session(std::shared_ptr<BufferManager> buffer, std::shared_ptr<Catalog> catalog,
                  std::shared_ptr<TransactionManager> txn_manager,
@@ -84,6 +121,7 @@ auto Session::AbortTxn() -> void {
 
 auto Session::Execute(const std::string &sql) -> void {
     last_result_.clear();
+    last_column_names_.clear();
 
     Parser parser;
     parser.ParserQuery(sql);
@@ -119,6 +157,7 @@ auto Session::Execute(const std::string &sql) -> void {
         // 单条语句过 binder + planner + executor。
         Binder binder(catalog_);
         auto bound = binder.BinderStatement(std::move(stmt));
+        last_column_names_ = ResultColumnNames(catalog_, bound.get());
 
         auto ctx = std::make_unique<ExecutorContext>(buffer_, catalog_);
         ctx->txn_manager_ = txn_manager_;

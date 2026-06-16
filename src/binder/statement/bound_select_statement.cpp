@@ -4,10 +4,21 @@
 #include "binder/statement/bound_select_statement.h"
 
 #include "binder/binder.h"
+#include "binder/expression/bound_column_expression.h"
 #include "common/chicken_execption.h"
 #include "parser/statment/select_sql_statement.h"
 using namespace chickenDB;
 
+namespace {
+    auto ExpandStar(const std::shared_ptr<Catalog> &catalog, table_id_t table_id,
+                    std::vector<std::unique_ptr<BoundExpression>> &columns) -> void {
+        const SchemaPage *schema = catalog->GetSchema(table_id);
+        ChickenException::AssertCondition(schema != nullptr, "[Binder] unknown schema for select *");
+        for (const auto &col : schema->columns_) {
+            columns.push_back(std::make_unique<BoundColumnExpression>(table_id, col.col_id));
+        }
+    }
+}
 
 auto Binder::BinderSelectStatement(std::unique_ptr<SQLStatement> statement) -> std::unique_ptr<BoundStatement> {
     ChickenException::AssertCondition(statement->type_ == StatementType::SELECT,
@@ -38,6 +49,13 @@ auto Binder::BinderSelectStatement(std::unique_ptr<SQLStatement> statement) -> s
     }
 
     for (auto &parser_expression: parser_select_statement->columns_) {
+        if (parser_expression == nullptr) {
+            ExpandStar(catalog_, bound_select_statement->table_id_, bound_select_statement->columns_);
+            if (bound_select_statement->has_join_) {
+                ExpandStar(catalog_, bound_select_statement->join_table_id_, bound_select_statement->columns_);
+            }
+            continue;
+        }
         bound_select_statement->columns_.push_back(BoundExpression(std::move(parser_expression)));
     }
 
