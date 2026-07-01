@@ -1,0 +1,5 @@
+add_subdirectory(rule)
+
+add_library(CHICKEN_OPTIMIZER OBJECT optimizer.cpp)
+
+set(ALL_OBJECT_FILES ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:CHICKEN_OPTIMIZER> PARENT_SCOPE)

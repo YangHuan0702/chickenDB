@@ -4,6 +4,7 @@ add_subdirectory(catalog)
 add_subdirectory(disk)
 add_subdirectory(binder)
 add_subdirectory(planner)
+add_subdirectory(optimizer)
 add_subdirectory(buffer)
 add_subdirectory(executor)
 add_subdirectory(index)
@@ -18,6 +19,8 @@ set(CHICKEN_LIB
         CHICKEN_DISK
         CHICKEN_BINDER
         CHICKEN_PLANNER
+        CHICKEN_OPTIMIZER
+        CHICKEN_OPTIMIZER_RULES
         CHICKEN_BUFFER
         CHICKEN_EXECUTOR
         CHICKEN_INDEX

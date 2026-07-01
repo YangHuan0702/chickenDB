@@ -9,6 +9,7 @@
 #include "common/chicken_execption.h"
 #include "executor/execution.h"
 #include "executor/executor_context.h"
+#include "optimizer/optimizer.h"
 #include "parser/parser.h"
 #include "parser/statment/transaction_statement.h"
 #include "planner/planner.h"
@@ -166,6 +167,11 @@ auto Session::Execute(const std::string &sql) -> void {
         ctx->txn_ = current_txn_;
 
         auto logical = planner.CreateLogicalPlanner(std::move(bound));
+
+        // 在逻辑计划和物理计划之间应用优化器。
+        Optimizer optimizer(catalog_);
+        logical = optimizer.Optimize(std::move(logical));
+
         auto physical = planner.CreatePhysicalPlanner(std::move(logical));
 
         Execution exec(std::move(ctx));
